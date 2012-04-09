@@ -94,6 +94,10 @@ module.exports = function () {
         return trips;
         
     };
+
+    this.getTripForRoute = function (route_id) {
+        return this.getTripsForRoute(route_id)[0];
+    };
     
     this.getShapesById = function (id) {
         var ret = [], i;
