@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Santa Fe Autobus</title>
+        <link rel="stylesheet" href="/css/dot-luv/jquery-ui-1.8.18.custom.css"/>
+        <link rel="stylesheet" href="/css/autobus.css"/>
+    </head>
+    <body>
+        <h1>Santa Fe Autobus</h1>
+        <div id="autobus_div">
+        <div id="map_canvas" class="ui-corner-all"></div>
+        <div id="autobus_route_list" class="ui-corner-all">
+            <div id="autobus_route_list_title">Routes</div>
+        </div>
+        </div>
+        <script src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="js/autobus.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.js"></script>
+        <script>
+            $(document).ready(function() {
+                autobus.initialize();
+            });
+        </script>
+    </body>
+</html>

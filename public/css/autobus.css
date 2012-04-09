@@ -1,0 +1,36 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#autobus_div {
+    width: 1130px;
+}
+
+#map_canvas {
+    width: 800px;
+    height: 600px; 
+    float:left;
+    border: 1px black solid;
+}
+
+#autobus_route_list {
+    width:  300px;
+    height: 586px;
+    border: 1px black solid;
+    float: right;
+    padding: 7px;
+}
+
+#autobus_route_list_title {
+    font-size: 1.5em;
+}
+
+.autobus_list_item {
+    padding: 5px;
+    cursor: pointer;
+}
