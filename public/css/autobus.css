@@ -34,3 +34,13 @@ a {
     padding: 5px;
     cursor: pointer;
 }
+
+.olMarkerLabel {
+    font-size: small;
+    color: black;
+    background-color: #FFFFCC;
+    width: auto;
+    padding: 1px;
+    border: 1px black solid;
+    z-index: 1000;
+}
