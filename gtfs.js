@@ -10,6 +10,33 @@ var clone = function (src, dest) {
     }   
 };
 
+if (typeof(Number.prototype.toRad) === "undefined") {
+    Number.prototype.toRad = function () {
+        return this * Math.PI / 180;
+    };
+}
+
+var Point = function (lat, lon) {
+    this.lat = lat;
+    this.lon = lon;
+};
+
+var RADIUS_OF_EARTH = 6371;
+
+var distanceBetweenTwoPoints = function (pt1, pt2) {
+    var dLat, dLon, a, c;
+    
+    dLat = (pt2.lat - pt1.lat).toRad();
+    
+    dLon = (pt2.lon - pt1.lon).toRad();
+    a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(pt1.lat.toRad()) * Math.cos(pt2.lat.toRad()) * 
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        
+    return RADIUS_OF_EARTH * c; // Distance in km
+};
+
 module.exports = function () {
     
     this.dataset = {};
@@ -44,6 +71,10 @@ module.exports = function () {
     
     this.getTrips = function () {
         return this.dataset.trips;
+    };
+    
+    this.getClosestStop = function (point) {
+        var d = 1;
     };
     
     this.getRouteById = function (id) {
@@ -145,6 +176,10 @@ module.exports = function () {
             ret.stop = this.getStopById(stop_id);
         }
         return ret;
+    };
+    
+    this.getNearestStop = function (lat, lon) {
+        
     };
     
     this.getStopTimesForTrip = function (trip_id) {
