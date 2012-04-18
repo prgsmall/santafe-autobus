@@ -1,10 +1,10 @@
-/*globals require module console __dirname */
+/*globals require module console __dirname setTimeout*/
 var express = require('express'),
     csv = require('csv'),
     GTFS = require("./gtfs");
 var app;
 var io;
-var gtfs = new GTFS();
+var gtfs = null;
 
 var startHTTPServer = function () {
     app = express.createServer();
@@ -30,15 +30,19 @@ var startHTTPServer = function () {
             socket.emit("routes", JSON.stringify(gtfs.getRoutes()));
         });
         socket.on("get route", function (data) {
+            var ns = gtfs.getNearestStop(35.6660, -105.9632);
+            var ret = gtfs.getNextArrivalsForStop("2", "3006");
             socket.emit("route", JSON.stringify(gtfs.getTripForRoute(data.route_id)));
         });
     });
 };
 
+var START = function () {
+    gtfs = GTFS.createGeneralTransitFeed("http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed", startHTTPServer);    
+};
+
 var start = function () {
-    // Read in the GTFS data.  Start the http server once the GTFS data
-    // has been read in.
-    gtfs.init(__dirname, startHTTPServer);
+    setTimeout(START, 20000);
 };
 
 start();

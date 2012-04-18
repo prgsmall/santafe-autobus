@@ -7,6 +7,11 @@ var objCallback = function (obj, func) {
     };
 };
 
+var MarkerInfo = function (lonlat, content) {
+    this.lonlat = lonlat;
+    this.content = content;
+};
+
 var autobus = {
 
     map: null,
@@ -19,7 +24,7 @@ var autobus = {
     
     routeLayers: {},
     
-    lonlat: function (lat, lon) {
+    lonlat: function (lon, lat) {
         return new OpenLayers.LonLat(lon, lat)
             .transform(
                     new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
@@ -28,20 +33,20 @@ var autobus = {
     },
     
     onPositionUpdate: function (position) {
-        var lonlat;
+        var markerInfo;
         if (!("currentPosition" in this.markerLayers)) {
-            lonlat = this.lonlat(position.coords.latitude, position.coords.longitude);
-            this.createMarkerLayer("currentPosition", [lonlat]);
+            markerInfo = new MarkerInfo(this.lonlat(position.coords.longitude, position.coords.latitude), "You are here");
+            this.createMarkerLayer("currentPosition", [markerInfo]);
         }
 
         console.log("Current position: " + position.coords.latitude + " " + position.coords.longitude);        
     },
     
-    createMarkerLayer: function (name, lonlats) {
+    createMarkerLayer: function (name, markerInfo) {
         var i, markerLayer = new OpenLayers.Layer.Markers(name);
         
-        for (i = 0; i < lonlats.length; i += 1) {
-            markerLayer.addMarker(new OpenLayers.Marker(lonlats[i]));
+        for (i = 0; i < markerInfo.length; i += 1) {
+            this.addMarker(markerInfo[i].lonlat, markerInfo[i].content, markerLayer);
         }
         
         this.markerLayers[name] = markerLayer;
@@ -50,8 +55,42 @@ var autobus = {
         return markerLayer;
     },
     
+    /**
+     * Add a new marker to the markers layer given the lonlat and popup contents HTML.
+     * @param ll {OpenLayers.LonLat} Where to place the marker
+     * @param popupContentHTML {String} What to put in the popup
+     * @param markerLayer {OpenLayers.Layer.Markers} The marker layer to add the markers to
+     */
+    addMarker: function (ll, popupContentHTML, markerLayer) {
+
+        var feature = new OpenLayers.Feature(markerLayer, ll); 
+        feature.closeBox = true;
+        feature.popupClass = OpenLayers.Popup.FramedCloud;
+        feature.data.popupContentHTML = popupContentHTML;
+        feature.data.overflow = "auto";
+
+        var marker = feature.createMarker();
+
+        var markerClick = function (evt) {
+            if (this.popup == null) {
+                this.popup = this.createPopup(this.closeBox);
+                this.layer.map.addPopup(this.popup);
+                this.popup.show();
+            } else {
+                this.popup.toggle();
+            }
+            currentPopup = this.popup;
+            OpenLayers.Event.stop(evt);
+        };
+        marker.events.register("mousedown", feature, markerClick);
+
+        markerLayer.addMarker(marker);
+    },
+
     initialize: function () {
-        var mapCenter = this.lonlat(35.6660, -105.9632);
+        OpenLayers.Popup.FramedCloud.prototype.autoSize = true;
+
+        var mapCenter = this.lonlat(-105.9632, 35.6660);
         
         this.map = new OpenLayers.Map("map_canvas");
         this.map.addLayer(new OpenLayers.Layer.OSM());
@@ -73,8 +112,8 @@ var autobus = {
             this.routes[rt.route_id] = rt;
             $("<div></div>")
                 .attr("id", "route_" + rt.route_id)
-                .css("background", rt.route_color)
-                .html(rt.route_desc)
+                .css("background", "#" + rt.route_color)
+                .html(rt.route_short_name + " " + rt.route_desc)
                 .click(objCallback(this, "onclickRoute"))
                 .addClass("autobus_list_item ui-corner-all")
                 .css("opacity", "0.5")
@@ -117,22 +156,23 @@ var autobus = {
 
     onRoute: function (data) {
         var i, route = JSON.parse(data), routePath, stop, point, lineString, lineFeature,
-        routeCoordinates = [], points = [], route_style;
+        markerInfo = [], points = [], route_style;
         
         // Extract the route coordinates
         for (i = 0; i < route.stop_times.length; i += 1) {
             stop = route.stop_times[i].stop;
-            point = this.lonlat(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
-            routeCoordinates.push(point);
+            point = this.lonlat(parseFloat(stop.stop_lon), parseFloat(stop.stop_lat));
+            
+            markerInfo.push(new MarkerInfo(point, stop.stop_name));
             
             points.push(new OpenLayers.Geometry.Point(point.lon, point.lat));
         }
         
         // Create a marker layer to contain each stop
-        this.createMarkerLayer(route.route_id, routeCoordinates);
+        this.createMarkerLayer(route.route_id, markerInfo);
         
         route_style = {
-            strokeColor: this.routes[route.route_id].route_color,
+            strokeColor: "#" + this.routes[route.route_id].route_color,
             strokeOpacity: 1.0,
             strokeWidth: 2
         };
