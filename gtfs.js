@@ -45,11 +45,11 @@ GTFSReader.prototype.getGTFSFiles = function (file_url, self) {
         path: url.parse(file_url).pathname
     };
 
-    file_name = this.dataDir + url.parse(file_url).pathname.split('/').pop();
+    file_name = this.gtfsobj.dataDir + url.parse(file_url).pathname.split('/').pop();
     file = fs.createWriteStream(file_name, 
         { flags: 'w',
           encoding: "binary",
-          mode: 0666 }
+          mode: 0755 }
     );
 
     http.get(options, function (res) {
@@ -63,26 +63,22 @@ GTFSReader.prototype.getGTFSFiles = function (file_url, self) {
 };
 
 GTFSReader.prototype.unzipFeedFiles = function (file_name) {
-    var uncompressed, zipfile, dirname, zf, fd;
+    var uncompressed, zipfile, dirname, zf, fd, i;
     zipfile = require('zipfile');
     zf = new zipfile.ZipFile(file_name);
     console.log(zf);
-    zf.names.forEach(function (name) {
-        uncompressed = path.join('./data', name);
-        dirname = path.dirname(uncompressed);
-        fs.mkdir(dirname, 0755 , function (err) {
-            if (err && !err.code.match(/^EEXIST/)) {
-                throw err;
-            } 
-            if (path.extname(name)) {
-                var buffer = zf.readFileSync(name);
-                fd = fs.openSync(uncompressed, 'w');
-                console.log('unzipping: ' + name);
-                fs.writeSync(fd, buffer, 0, buffer.length, null);
-                fs.closeSync(fd);
-            }
-        });
-    });
+    for (i = 0; i < zf.names.length; i += 1) {
+        name = zf.names[i];
+        uncompressed = path.join(this.gtfsobj.dataDir, name);
+        
+        if (path.extname(name)) {
+            var buffer = zf.readFileSync(name);
+            fd = fs.openSync(uncompressed, 'w');
+            console.log('unzipping: ' + name);
+            fs.writeSync(fd, buffer, 0, buffer.length, null);
+            fs.closeSync(fd);
+        }
+    }
 
     this.gtfsobj.parseFeedFiles();
 };
@@ -97,7 +93,7 @@ var GeneralTransitFeed = function (uri, callback) {
     
     this.callback = callback;
     this.dataDir = __dirname + "/data/";
-    utils.mkdirp(this.dataDir);
+    utils.mkdirp(this.dataDir, 0755);
     
     var gtfsReader = new GTFSReader(uri, this);
 };
@@ -110,8 +106,17 @@ GeneralTransitFeed.prototype.getCalendars = function () {
     return this.dataset.calendar;
 };
 
-GeneralTransitFeed.prototype.getRoutes = function () {
-    return this.dataset.routes;
+GeneralTransitFeed.prototype.getRoutes = function (routesOnly) {
+    var i, ret = [];
+    routesOnly = (typeof(routesOnly) === "undefined") ? false : routesOnly;
+    if (routesOnly) {
+        ret = this.dataset.routes;
+    } else {
+        for (i = 0; i < this.dataset.routes.length; i += 1) {
+            ret.push(this.getRouteById(this.dataset.routes[i].route_id));
+        }
+    }
+    return ret;
 };
 
 GeneralTransitFeed.prototype.getShapes = function () {
@@ -128,10 +133,6 @@ GeneralTransitFeed.prototype.getStopTimes = function () {
 
 GeneralTransitFeed.prototype.getTrips = function () {
     return this.dataset.trips;
-};
-
-GeneralTransitFeed.prototype.getClosestStop = function (point) {
-    var d = 1;
 };
 
 GeneralTransitFeed.prototype.getRouteById = function (id) {

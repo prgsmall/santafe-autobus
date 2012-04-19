@@ -1,15 +1,9 @@
-
-/*global $ window document google io console alert OpenLayers navigator*/
+/*global $ window document google io console autobusSocket navigator MapIconMaker*/
 
 var objCallback = function (obj, func) {
     return function () {
         obj[func].apply(obj, arguments);
     };
-};
-
-var MarkerInfo = function (lonlat, content) {
-    this.lonlat = lonlat;
-    this.content = content;
 };
 
 var autobus = {
@@ -18,88 +12,40 @@ var autobus = {
     
     routes: {},
     
+    routePaths: {},
+    
     markers: {},
     
-    markerLayers: {},
-    
-    routeLayers: {},
-    
-    lonlat: function (lon, lat) {
-        return new OpenLayers.LonLat(lon, lat)
-            .transform(
-                    new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
-                    new OpenLayers.Projection("EPSG:900913") // to Spherical Mercator Projection
-        );
-    },
+    currentPositionMarker: null,
     
     onPositionUpdate: function (position) {
-        var markerInfo;
-        if (!("currentPosition" in this.markerLayers)) {
-            markerInfo = new MarkerInfo(this.lonlat(position.coords.longitude, position.coords.latitude), "You are here");
-            this.createMarkerLayer("currentPosition", [markerInfo]);
+        var point = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+        if (!this.currentPositionMarker) {
+        
+            this.currentPositionMarker = new google.maps.Marker({
+                position: point,
+                map: this.map,
+                title: "You Are Here"
+            });
+        } else {
+            this.currentPositionMarker.setPosition(point);
         }
-
-        console.log("Current position: " + position.coords.latitude + " " + position.coords.longitude);        
     },
     
-    createMarkerLayer: function (name, markerInfo) {
-        var i, markerLayer = new OpenLayers.Layer.Markers(name);
-        
-        for (i = 0; i < markerInfo.length; i += 1) {
-            this.addMarker(markerInfo[i].lonlat, markerInfo[i].content, markerLayer);
-        }
-        
-        this.markerLayers[name] = markerLayer;
-        this.map.addLayer(this.markerLayers[name]);
-        
-        return markerLayer;
-    },
-    
-    /**
-     * Add a new marker to the markers layer given the lonlat and popup contents HTML.
-     * @param ll {OpenLayers.LonLat} Where to place the marker
-     * @param popupContentHTML {String} What to put in the popup
-     * @param markerLayer {OpenLayers.Layer.Markers} The marker layer to add the markers to
-     */
-    addMarker: function (ll, popupContentHTML, markerLayer) {
-
-        var feature = new OpenLayers.Feature(markerLayer, ll); 
-        feature.closeBox = true;
-        feature.popupClass = OpenLayers.Popup.FramedCloud;
-        feature.data.popupContentHTML = popupContentHTML;
-        feature.data.overflow = "auto";
-
-        var marker = feature.createMarker();
-
-        var markerClick = function (evt) {
-            if (this.popup == null) {
-                this.popup = this.createPopup(this.closeBox);
-                this.layer.map.addPopup(this.popup);
-                this.popup.show();
-            } else {
-                this.popup.toggle();
-            }
-            currentPopup = this.popup;
-            OpenLayers.Event.stop(evt);
-        };
-        marker.events.register("mousedown", feature, markerClick);
-
-        markerLayer.addMarker(marker);
-    },
-
     initialize: function () {
-        OpenLayers.Popup.FramedCloud.prototype.autoSize = true;
-
-        var mapCenter = this.lonlat(-105.9632, 35.6660);
-        
-        this.map = new OpenLayers.Map("map_canvas");
-        this.map.addLayer(new OpenLayers.Layer.OSM());
-        this.map.setCenter(mapCenter, 12);
+        // Initialize the map
+        var myOptions = {
+            zoom: 12,
+            center: new google.maps.LatLng(35.6660, -105.9632),
+            mapTypeId: google.maps.MapTypeId.TERRAIN
+        };
+        this.map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
         
         // Set the socket
         // TODO:  need to use acequia for this.  This will need node to node communications.
         autobusSocket.init("http://localhost:3000");
         
+        // Set up to get position updates
         navigator.geolocation.getCurrentPosition(objCallback(this, "onPositionUpdate"));
     },
     
@@ -113,7 +59,7 @@ var autobus = {
             $("<div></div>")
                 .attr("id", "route_" + rt.route_id)
                 .css("background", "#" + rt.route_color)
-                .html(rt.route_short_name + " " + rt.route_desc)
+                .html(rt.route_id + ": " + rt.route_desc)
                 .click(objCallback(this, "onclickRoute"))
                 .addClass("autobus_list_item ui-corner-all")
                 .css("opacity", "0.5")
@@ -124,7 +70,7 @@ var autobus = {
     onclickRoute: function (evt) {
         var route_id = evt.target.id;
         route_id = route_id.substring(route_id.indexOf("_") + 1);
-        if (this.routeLayers[route_id]) {
+        if (this.routePaths[route_id]) {
             this.toggleRoute(route_id);
         } else {
             autobusSocket.emit("get route", {route_id: route_id});
@@ -133,7 +79,7 @@ var autobus = {
     
     toggleRoute: function (route_id) {
         var i;
-        if (this.routeLayers[route_id].getMap() === null) {
+        if (this.routePaths[route_id].getMap() === null) {
             this.setMapForPath(route_id, this.map);
             $("#route_" + route_id).css("opacity", "1.0");
         } else {
@@ -150,45 +96,115 @@ var autobus = {
     },
     
     setMapForPath: function (route_id, map) {
-        this.routeLayers[route_id].setMap(map);
+        this.routePaths[route_id].setMap(map);
         this.setMapForMarkers(route_id, map);
+    },
+    
+    dateFromTimeString: function (timeString) {
+        var ret,
+        dd = timeString.split(":");
+
+        ret = new Date();
+        ret.setHours(parseInt(dd[0], 10));
+        ret.setMinutes(parseInt(dd[1], 10));
+        ret.setSeconds(parseInt(dd[2], 10));
+
+        return ret;
+    },
+    
+    getNextArrivalsForStop: function (route_id, stop_id, time) {
+        var i, j, trips = [], stop_time, ret = [], arrival_time, service_id;
+
+        if (typeof(time) === "undefined") {
+            time = new Date();
+        }
+
+        if (time.getDay() === 0) {
+            service_id = "SU";
+        } else if (time.getDay() === 6) {
+            service_id = "SA";
+        } else {
+            service_id = "WD";
+        }
+
+        trips = this.routes[route_id].trips;
+
+        for (i = 0; i < trips.length; i += 1) {
+            if (service_id !== trips[i].service_id) {
+                continue;
+            }
+            for (j = 0; j < trips[i].stop_times.length; j += 1) {
+                stop_time = trips[i].stop_times[j];
+                if (stop_time.stop_id === stop_id) {
+                    arrival_time = this.dateFromTimeString(stop_time.arrival_time);
+                    if (arrival_time > time) {
+                        ret.push(stop_time.arrival_time);
+                    }
+                }
+            }
+        }
+
+        return ret;
     },
 
     onRoute: function (data) {
-        var i, route = JSON.parse(data), routePath, stop, point, lineString, lineFeature,
-        markerInfo = [], points = [], route_style;
+        var i, route = JSON.parse(data), routePath, stop, point, marker, infowindow,
+        routeCoordinates = [], color,
         
-        // Extract the route coordinates
-        for (i = 0; i < route.stop_times.length; i += 1) {
-            stop = route.stop_times[i].stop;
-            point = this.lonlat(parseFloat(stop.stop_lon), parseFloat(stop.stop_lat));
-            
-            markerInfo.push(new MarkerInfo(point, stop.stop_name));
-            
-            points.push(new OpenLayers.Geometry.Point(point.lon, point.lat));
-        }
-        
-        // Create a marker layer to contain each stop
-        this.createMarkerLayer(route.route_id, markerInfo);
-        
-        route_style = {
-            strokeColor: "#" + this.routes[route.route_id].route_color,
-            strokeOpacity: 1.0,
-            strokeWidth: 2
+        onclick = function (i, m) {
+            return function () {
+                var times, content, j;
+                times = autobus.getNextArrivalsForStop(m.route_id, m.stop_id);
+                content = "<div style='height:100px;overflow:hidden;'>";
+                content += "<div style='font-weight:bold'>" + m.title + "</div>";
+                content += "<div style='height:90px;overflow:auto;'>";
+                for (j = 0; j < times.length; j += 1) {
+                    content += "<div>" + times[j] + "</div>";
+                }
+                content += "</div></div>";
+                i.content = content;
+                i.open(this.map, m);
+            };
         };
         
-        lineString  = new OpenLayers.Geometry.LineString(points);
-        lineFeature = new OpenLayers.Feature.Vector(lineString, null, route_style);
-        this.routeLayers[route.route_id] = new OpenLayers.Layer.Vector(route.route_id,
-            {
-                isBaseLayer: false,
-                rendererOptions: {yOrdering: true}
-            });
-        this.routeLayers[route.route_id].addFeatures([lineFeature]);
+        color = "#" + this.routes[route.route_id].route_color;
         
-        this.map.addLayer(this.routeLayers[route.route_id]);
+        this.markers[route.route_id] = [];
+        
+        infowindow = new google.maps.InfoWindow({
+            content: "blah"
+        });
 
-        $("#route_" + route.route_id).css("opacity", "1.0");        
+        for (i = 0; i < route.stop_times.length; i += 1) {
+            stop = route.stop_times[i].stop;
+            point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
+            routeCoordinates.push(point);
+            
+            marker = new google.maps.Marker({
+                position: point,
+                map: this.map,
+                title: stop.stop_name,
+                icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
+                stop_id: stop.stop_id,
+                route_id: route.route_id
+            });
+            
+            this.markers[route.route_id].push(marker);
+            
+            google.maps.event.addListener(marker, 'click', onclick(infowindow, marker));
+        }
+            
+        routePath = new google.maps.Polyline({
+            path: routeCoordinates,
+            strokeColor: color,
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+        });
+          
+        routePath.setMap(this.map);
+        $("#route_" + route.route_id).css("opacity", "1.0");
+        
+        this.routePaths[route.route_id] = routePath;
     }
 };
 
