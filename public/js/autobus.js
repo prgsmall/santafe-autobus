@@ -256,6 +256,10 @@ var autobusSocket = {
             autobus.onRouteFromServer(data);
         });
         
+        this.socket.on('busPosition2', function (data) {
+            console.log("data");
+        });
+        
         this.socket.emit("get routes", {});
     },
     

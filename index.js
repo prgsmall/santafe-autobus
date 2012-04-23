@@ -6,6 +6,8 @@ var app;
 var io;
 var gtfs = null;
 
+var sfab_clients = {};
+
 var startHTTPServer = function () {
     app = express.createServer();
     io = require('socket.io').listen(app);
@@ -26,12 +28,21 @@ var startHTTPServer = function () {
     console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
     
     io.sockets.on('connection', function (socket) {
+        
         socket.on("get routes", function (data) {
+            sfab_clients[socket.id] = socket;
             socket.emit("routes", JSON.stringify(gtfs.getRoutes()));
         });
         socket.on("get route", function (data) {
             socket.emit("route", JSON.stringify(gtfs.getRouteById(data.route_id)));
         });
+        socket.on("busPosition", function (data) {
+            var id;
+            for (id in sfab_clients) {
+                sfab_clients[id].emit("busPosition2", JSON.stringify(data));                
+            }
+
+        })
     });
 };
 
