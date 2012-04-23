@@ -23,7 +23,7 @@ var GTFSReader = function (uri, gtfsobj) {
 };
 
 GTFSReader.prototype.onfeed = function (error, meta, articles) {
-    var start, end, file_url;
+    var start, end, file_url, file;
     if (error) {
         console.error(error);
     } else {
@@ -31,7 +31,12 @@ GTFSReader.prototype.onfeed = function (error, meta, articles) {
         end      =  articles[0].description.indexOf('"', start);
         file_url = articles[0].description.substring(start, end);
         
-        this.getGTFSFiles(file_url, this);
+        file = this.gtfsobj.dataDir + url.parse(file_url).pathname.split('/').pop();
+        if (path.existsSync(file)) {
+            this.gtfsobj.parseFeedFiles();
+        } else {
+            this.getGTFSFiles(file_url, this);
+        }
     }
 };
 
@@ -107,16 +112,7 @@ GeneralTransitFeed.prototype.getCalendars = function () {
 };
 
 GeneralTransitFeed.prototype.getRoutes = function (routesOnly) {
-    var i, ret = [];
-    routesOnly = (typeof(routesOnly) === "undefined") ? false : routesOnly;
-    if (routesOnly) {
-        ret = this.dataset.routes;
-    } else {
-        for (i = 0; i < this.dataset.routes.length; i += 1) {
-            ret.push(this.getRouteById(this.dataset.routes[i].route_id));
-        }
-    }
-    return ret;
+    return this.dataset.routes;
 };
 
 GeneralTransitFeed.prototype.getShapes = function () {
@@ -181,7 +177,6 @@ GeneralTransitFeed.prototype.getTripsForRoute = function (route_id) {
         trips.push(this.getTripById(trip_ids[i]));
     }
     return trips;
-    
 };
 
 GeneralTransitFeed.prototype.getTripForRoute = function (route_id) {
@@ -321,6 +316,7 @@ GeneralTransitFeed.prototype.parseFeedFiles = function () {
 GeneralTransitFeed.prototype.load = function (feed, cb, self) {
     var out = [], stats,
     feedFile = this.dataDir + feed + ".txt";
+    var f = ((feed.indexOf('s') === feed.length - 1) ? feed.substring(0, feed.length - 1) : feed) + "_";
     try {
         // Call stat to see if the file exists.  If it doesn't, it will throw
         // an exception and we will set the collection associated with this feed to empty
@@ -330,6 +326,17 @@ GeneralTransitFeed.prototype.load = function (feed, cb, self) {
         .fromPath(feedFile, {
             columns: true,
             trim: true
+        })
+        .transform (function(data, index) {
+            return data;
+            var ret = {}, column, c, pos;
+            for (c in data) {
+                pos = c.indexOf(f);
+                
+                column = (pos === -1) ? c : c.substring(pos + f.length);
+                ret[column] = data[c];
+            }
+            return ret;
         })
         .on('data', function (data, index) {
             out.push(data);

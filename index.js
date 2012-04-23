@@ -30,9 +30,7 @@ var startHTTPServer = function () {
             socket.emit("routes", JSON.stringify(gtfs.getRoutes()));
         });
         socket.on("get route", function (data) {
-            var ns = gtfs.getNearestStop(35.6660, -105.9632);
-            var ret = gtfs.getNextArrivalsForStop("2", "3006");
-            socket.emit("route", JSON.stringify(gtfs.getTripForRoute(data.route_id)));
+            socket.emit("route", JSON.stringify(gtfs.getRouteById(data.route_id)));
         });
     });
 };

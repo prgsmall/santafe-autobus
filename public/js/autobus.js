@@ -50,8 +50,7 @@ var autobus = {
     },
     
     onRoutes: function (data) {
-        var i, rt,
-        routes = JSON.parse(data);
+        var i, rt, routes = JSON.parse(data);
         
         for (i = 0; i < routes.length; i += 1) {
             rt = routes[i];
@@ -68,12 +67,17 @@ var autobus = {
     },
     
     onclickRoute: function (evt) {
-        var route_id = evt.target.id;
+        var trip, route_id = evt.target.id;
         route_id = route_id.substring(route_id.indexOf("_") + 1);
         if (this.routePaths[route_id]) {
             this.toggleRoute(route_id);
         } else {
-            autobusSocket.emit("get route", {route_id: route_id});
+            if (typeof(this.routes[route_id].trips) === "undefined") {
+                autobusSocket.emit("get route", {route_id: route_id});
+            } else {
+                trip = this.getTripForRoute(route_id);
+                this.onRoute(trip);
+            }
         }
     },
     
@@ -112,20 +116,40 @@ var autobus = {
         return ret;
     },
     
+    getServiceId: function (time) {
+        if (typeof(time) === "undefined") {
+            time = new Date();
+        }
+        
+        if (time.getDay() === 0) {
+            return "SU";
+        } else if (time.getDay() === 6) {
+            return "SA";
+        } else {
+            return "WD";
+        }
+    },
+    
+    getTripForRoute: function (route_id) {
+        var i, route = this.routes[route_id],
+        service_id = this.getServiceId();
+        for (i = 0; i < route.trips.length; i += 1) {
+            if (route.trips[i].service_id === service_id) {
+                return route.trips[i];
+            }
+        }
+        
+        return null;
+    },
+    
     getNextArrivalsForStop: function (route_id, stop_id, time) {
         var i, j, trips = [], stop_time, ret = [], arrival_time, service_id;
 
         if (typeof(time) === "undefined") {
             time = new Date();
         }
-
-        if (time.getDay() === 0) {
-            service_id = "SU";
-        } else if (time.getDay() === 6) {
-            service_id = "SA";
-        } else {
-            service_id = "WD";
-        }
+        
+        service_id = this.getServiceId(time);
 
         trips = this.routes[route_id].trips;
 
@@ -146,9 +170,17 @@ var autobus = {
 
         return ret;
     },
+    
+    onRouteFromServer: function (data) {
+        var trip, route = JSON.parse(data);
+        this.routes[route.route_id] = route;
+        
+        trip = this.getTripForRoute(route.route_id);
+        this.onRoute(trip);
+    },
 
-    onRoute: function (data) {
-        var i, route = JSON.parse(data), routePath, stop, point, marker, infowindow,
+    onRoute: function (route) {
+        var i, routePath, stop, point, marker, infowindow,
         routeCoordinates = [], color,
         
         onclick = function (i, m) {
@@ -215,12 +247,13 @@ var autobusSocket = {
     init: function (uri) {
         
         this.socket = io.connect(uri);
+        
         this.socket.on('routes', function (data) {
             autobus.onRoutes(data);
         });
 
         this.socket.on('route', function (data) {
-            autobus.onRoute(data);
+            autobus.onRouteFromServer(data);
         });
         
         this.socket.emit("get routes", {});
