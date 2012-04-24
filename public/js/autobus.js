@@ -1,4 +1,4 @@
-/*global $ window document google io console autobusSocket navigator MapIconMaker*/
+/*global $ window document google io console autobusSocket navigator MapIconMaker AcequiaClient*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -40,17 +40,30 @@ var autobus = {
             mapTypeId: google.maps.MapTypeId.TERRAIN
         };
         this.map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-        
-        // Set the socket
-        // TODO:  need to use acequia for this.  This will need node to node communications.
-        autobusSocket.init("http://localhost:3000");
-        
+
+        this.acequiaClient = new AcequiaClient("autobus_" + Math.random());
+        this.acequiaClient.on("routes", objCallback(this, "onRoutes"));
+        this.acequiaClient.on("route", objCallback(this, "onRouteFromServer"));
+        this.acequiaClient.on("busPosition", objCallback(this, "onBusPosition"));
+        this.acequiaClient.addConnectionChangeHandler(objCallback(this, "onConnected"));
+        this.acequiaClient.connect();
+            
         // Set up to get position updates
         navigator.geolocation.getCurrentPosition(objCallback(this, "onPositionUpdate"));
     },
     
-    onRoutes: function (data) {
-        var i, rt, routes = JSON.parse(data);
+    onConnected: function (connected) {
+        if (connected) {
+            this.acequiaClient.send("getRoutes");
+        }
+    },
+    
+    onBusPosition: function (message) {
+        console.log(message);    
+    },
+    
+    onRoutes: function (message) {
+        var i, rt, routes = message.body;
         
         for (i = 0; i < routes.length; i += 1) {
             rt = routes[i];
@@ -73,7 +86,7 @@ var autobus = {
             this.toggleRoute(route_id);
         } else {
             if (typeof(this.routes[route_id].trips) === "undefined") {
-                autobusSocket.emit("get route", {route_id: route_id});
+                this.acequiaClient.send("getRoute", {route_id: route_id});
             } else {
                 trip = this.getTripForRoute(route_id);
                 this.onRoute(trip);
@@ -171,8 +184,8 @@ var autobus = {
         return ret;
     },
     
-    onRouteFromServer: function (data) {
-        var trip, route = JSON.parse(data);
+    onRouteFromServer: function (message) {
+        var trip, route = message.body[0];
         this.routes[route.route_id] = route;
         
         trip = this.getTripForRoute(route.route_id);
@@ -237,36 +250,5 @@ var autobus = {
         $("#route_" + route.route_id).css("opacity", "1.0");
         
         this.routePaths[route.route_id] = routePath;
-    }
-};
-
-var autobusSocket = {
-    
-    socket: null,
-        
-    init: function (uri) {
-        
-        this.socket = io.connect(uri);
-        
-        this.socket.on('routes', function (data) {
-            autobus.onRoutes(data);
-        });
-
-        this.socket.on('route', function (data) {
-            autobus.onRouteFromServer(data);
-        });
-        
-        this.socket.on('busPosition2', function (data) {
-            console.log("data");
-        });
-        
-        this.socket.emit("get routes", {});
-    },
-    
-    emit: function (msgName, data) {
-        if (typeof(data) === "undefined") {
-            data = {};
-        }
-        this.socket.emit(msgName, data);
     }
 };

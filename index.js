@@ -3,14 +3,32 @@ var express = require('express'),
     csv = require('csv'),
     GTFS = require("./gtfs");
 var app;
-var io;
+
 var gtfs = null;
 
 var sfab_clients = {};
 
+var acequiaServer = null;
+
+var onGetRoutes = function (message) {
+    acequiaServer.send("", "routes", gtfs.getRoutes(), message.to);
+};
+
+var onGetRoute = function (message) {
+    acequiaServer.send("", "route", gtfs.getRouteById(message.body[0].route_id), message.to);
+};
+
 var startHTTPServer = function () {
+    acequiaServer = require("acequia").createServer({
+        oscPort: false,
+        tcpPort: false,
+        datastore: false
+    });
+    acequiaServer.on("getRoutes", onGetRoutes);
+    acequiaServer.on("getRoute", onGetRoute);
+    acequiaServer.start();
+    
     app = express.createServer();
-    io = require('socket.io').listen(app);
     
     // Configuration
     app.configure(function () {
@@ -25,25 +43,7 @@ var startHTTPServer = function () {
     });
 
     app.listen(3000);
-    console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
-    
-    io.sockets.on('connection', function (socket) {
-        
-        socket.on("get routes", function (data) {
-            sfab_clients[socket.id] = socket;
-            socket.emit("routes", JSON.stringify(gtfs.getRoutes()));
-        });
-        socket.on("get route", function (data) {
-            socket.emit("route", JSON.stringify(gtfs.getRouteById(data.route_id)));
-        });
-        socket.on("busPosition", function (data) {
-            var id;
-            for (id in sfab_clients) {
-                sfab_clients[id].emit("busPosition2", JSON.stringify(data));                
-            }
-
-        })
-    });
+    console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);    
 };
 
 var START = function () {
@@ -51,7 +51,7 @@ var START = function () {
 };
 
 var start = function () {
-    setTimeout(START, 20000);
+    setTimeout(START, 200);
 };
 
 start();

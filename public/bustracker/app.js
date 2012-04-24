@@ -8,24 +8,23 @@ var objCallback = function (obj, func) {
 };
 
 var app = {
+    initialized: false,
+    
     init: function () {
-        this.socket = io.connect("http://localhost:3000");
-        this.routeId = "";
+        if (!this.initialized) {
+            this.initialized = true;
+            this.acequiaClient = new AcequiaClient("bus_tracker_" + Math.random());
+            this.acequiaClient.connect();
+            this.routeId = "";
+        }
     },
 
-    emit: function (msgName, data) {
-        if (typeof(data) === "undefined") {
-            data = {};
-        }
-        this.socket.emit(msgName, data);
-    },
-    
     setRouteId: function (id) {
         this.routeId = id;
     },
     
     onPositionUpdate: function (position) {
-        this.emit("busPosition", 
+        this.acequiaClient.send("busPosition", 
             {route_id: this.routeId,
              lat: position.coords.latitude,
              lon: position.coords.longitude}
