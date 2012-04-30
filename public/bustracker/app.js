@@ -13,9 +13,10 @@ var app = {
     init: function () {
         if (!this.initialized) {
             this.initialized = true;
-            this.acequiaClient = new AcequiaClient("bus_tracker_" + Math.random());
+            this.acequiaClient = new AcequiaClient("bus_tracker_" + Math.random(), "3001");
             this.acequiaClient.connect();
             this.routeId = "";
+            this.tracking = false;
         }
     },
 
@@ -29,15 +30,24 @@ var app = {
              lat: position.coords.latitude,
              lon: position.coords.longitude}
         );
+        
+        if (this.tracking) {
+            setTimeout(objCallback(this, "getCurrentPosition"), 5000);
+        }
     },
     
-    startTracking: function () {
-        this.routeId = $("#route_id_input").val();
+    getCurrentPosition: function () {
         navigator.geolocation.getCurrentPosition(objCallback(this, "onPositionUpdate"));
     },
     
+    startTracking: function () {
+        this.tracking = true;
+        this.routeId = $("#route_id").val();
+        this.getCurrentPosition();
+    },
+    
     stopTracking: function () {
-        navigator.geolocation.getCurrentPosition(function(){});        
+       this.tracking = false;   
     }
 };
 

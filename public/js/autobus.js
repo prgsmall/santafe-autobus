@@ -1,4 +1,4 @@
-/*global $ window document google io console autobusSocket navigator MapIconMaker AcequiaClient*/
+/*global $ window document google io console autobusSocket navigator MapIconMaker AcequiaClient setTimeout*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -16,6 +16,8 @@ var autobus = {
     
     markers: {},
     
+    buses: {},
+    
     currentPositionMarker: null,
     
     onPositionUpdate: function (position) {
@@ -25,7 +27,8 @@ var autobus = {
             this.currentPositionMarker = new google.maps.Marker({
                 position: point,
                 map: this.map,
-                title: "You Are Here"
+                title: "You Are Here",
+                draggable: true
             });
         } else {
             this.currentPositionMarker.setPosition(point);
@@ -41,7 +44,7 @@ var autobus = {
         };
         this.map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
 
-        this.acequiaClient = new AcequiaClient("autobus_" + Math.random());
+        this.acequiaClient = new AcequiaClient("autobus_" + Math.random(), "3001");
         this.acequiaClient.on("routes", objCallback(this, "onRoutes"));
         this.acequiaClient.on("route", objCallback(this, "onRouteFromServer"));
         this.acequiaClient.on("busPosition", objCallback(this, "onBusPosition"));
@@ -59,7 +62,22 @@ var autobus = {
     },
     
     onBusPosition: function (message) {
-        console.log(message);    
+        var busInfo = message.body[0], label, rt,
+            point   = new google.maps.LatLng(parseFloat(busInfo.lat), parseFloat(busInfo.lon));
+        
+        if (!this.buses[busInfo.route_id]) {
+            rt = this.routes[busInfo.route_id];
+            label = rt.route_id + ": " + rt.route_desc;
+            this.buses[busInfo.route_id] = new google.maps.Marker({
+                position: point,
+                map: this.map,
+                title: label,
+                icon: MapIconMaker.createLabeledMarkerIcon({width: 20, height: 34, label: label, 
+                                                            primaryColor: rt.route_color, labelColor: rt.route_color})
+            });
+        } else {
+            this.buses[busInfo.route_id].setPosition(point);
+        }
     },
     
     onRoutes: function (message) {
@@ -73,15 +91,28 @@ var autobus = {
                 .css("background", "#" + rt.route_color)
                 .html(rt.route_id + ": " + rt.route_desc)
                 .click(objCallback(this, "onclickRoute"))
+                .dblclick(objCallback(this, "ondbclickRoute"))
                 .addClass("autobus_list_item ui-corner-all")
                 .css("opacity", "0.5")
                 .appendTo("#autobus_route_list");
         }
     },
     
+    routeIdFromEvent: function (evt) {
+        var route_id = evt.target.id;
+        return route_id.substring(route_id.indexOf("_") + 1);
+    },
+    
+    ondbclickRoute: function (evt) {
+        var trip, route_id = this.routeIdFromEvent(evt);
+        if (this.routePaths[route_id]) {
+            trip = this.getTripForRoute(route_id);
+            this.startBusSimulation(trip);
+        }
+    },
+    
     onclickRoute: function (evt) {
-        var trip, route_id = evt.target.id;
-        route_id = route_id.substring(route_id.indexOf("_") + 1);
+        var trip, route_id = this.routeIdFromEvent(evt);
         if (this.routePaths[route_id]) {
             this.toggleRoute(route_id);
         } else {
@@ -175,7 +206,8 @@ var autobus = {
                 if (stop_time.stop_id === stop_id) {
                     arrival_time = this.dateFromTimeString(stop_time.arrival_time);
                     if (arrival_time > time) {
-                        ret.push(stop_time.arrival_time);
+                        ret.push({time: stop_time.arrival_time,
+                                  direction: trips[i].direction_id});
                     }
                 }
             }
@@ -191,6 +223,61 @@ var autobus = {
         trip = this.getTripForRoute(route.route_id);
         this.onRoute(trip);
     },
+    
+    updateBusPosition: function () {
+        this.busMarkerIndex += 1;
+        if (this.busMarkerIndex >= this.busMarkerPoints.length) {
+            return;
+        }
+        
+        this.busMarker.setPosition(this.busMarkerPoints[this.busMarkerIndex]);        
+        setTimeout(objCallback(this, "updateBusPosition"), 1000);        
+        
+    },
+    
+    busMarker: null,
+    busMarkerIndex: 0,
+    busMarkerPoints: [],
+    
+    startBusSimulation: function (trip) {
+        var i, j, points, fraction;
+        
+        if (this.busMarker) {
+            this.busMarker.setMap(null);
+            delete this.busMarker;
+            this.busMarker = null;
+        }
+        
+        // Generate the bus marker points by interpolating between each stop
+        
+        // First create an array of the trip points
+        points = [];
+        for (j = 0; j < trip.stop_times.length; j += 1) {
+            points.push(new google.maps.LatLng(parseFloat(trip.stop_times[j].stop.stop_lat), parseFloat(trip.stop_times[j].stop.stop_lon)));
+        }
+        
+        // Interpolate between the points
+        for (i = 0; i < points.length; i += 1) {
+            this.busMarkerPoints.push(points[i]);
+            if (i < points.length - 1) {
+                fraction = 0;
+                while (fraction <= 1) {
+                    this.busMarkerPoints.push(new google.maps.geometry.spherical.interpolate(points[i], points[i + 1], fraction));
+                    fraction += 0.2;
+                }
+            }
+        }
+        
+        // Create the marker
+        this.busMarker = new google.maps.Marker({
+            position: points[0],
+            map: this.map,
+            title: "bus",
+            icon: "/images/bus.png"
+        });
+        
+        setTimeout(objCallback(this, "updateBusPosition"), 1000);        
+    },
 
     onRoute: function (route) {
         var i, routePath, stop, point, marker, infowindow,
@@ -204,7 +291,9 @@ var autobus = {
                 content += "<div style='font-weight:bold'>" + m.title + "</div>";
                 content += "<div style='height:90px;overflow:auto;'>";
                 for (j = 0; j < times.length; j += 1) {
-                    content += "<div>" + times[j] + "</div>";
+                    content += "<div>" + times[j].time;
+                    // content += (times[j].direction_id === "0") ? " outbound" : " inbound";
+                    content += "</div>";
                 }
                 content += "</div></div>";
                 i.content = content;

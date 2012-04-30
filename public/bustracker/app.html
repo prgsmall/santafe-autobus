@@ -12,7 +12,7 @@
         </style>
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
         <script src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
-        <script src="http://localhost:9091/acequia/acequia.js"></script>
+        <script src="http://node.redfish.com:9091/acequia/acequia.js"></script>
     </head>
     <body>
         <div data-role="page" data-theme="b" id="start_page">
@@ -38,12 +38,41 @@
             </div>
             <div data-role="content">
                 <div data-role="fieldcontain">
-                    <fieldset data-role="controlgroup">
-                        <label for="route_id_input">
-                            Enter Bus Route Number:
-                        </label>
-                        <input id="route_id_input" placeholder="" value="" type="text" />
-                    </fieldset>
+                    <label for="selectmenu1">
+                        Select Bus Route:
+                    </label>
+                    <select name="route_id" id="route_id">
+                        <option value="1">
+                            1: Agua Fria
+                        </option>
+                        <option value="2">
+                            2: Cerrillos
+                        </option>
+                        <option value="4">
+                            4: Southside
+                        </option>
+                        <option value="5">
+                            5: Crosstown
+                        </option>
+                        <option value="6">
+                            6: Rodeo Road
+                        </option>
+                        <option value="21">
+                            21: SFCC
+                        </option>
+                        <option value="22">
+                            22: HSD/Rancho Viejo
+                        </option>
+                        <option value="24">
+                            24: Country Club
+                        </option>
+                        <option value="26">
+                            26: Santa Fe Place South Cerrillos and Fashion Outlets
+                        </option>
+                        <option value="M">
+                            M: Museum Hill
+                        </option>
+                    </select>
                 </div>
                 <a data-role="button" data-transition="fade" href="#tracking_page" data-icon="arrow-r" data-iconpos="right">
                     Start Tracking
