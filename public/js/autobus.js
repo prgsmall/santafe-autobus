@@ -86,15 +86,22 @@ var autobus = {
         for (i = 0; i < routes.length; i += 1) {
             rt = routes[i];
             this.routes[rt.route_id] = rt;
+
             $("<div></div>")
                 .attr("id", "route_" + rt.route_id)
                 .css("background", "#" + rt.route_color)
                 .html(rt.route_id + ": " + rt.route_desc)
                 .click(objCallback(this, "onclickRoute"))
-                .dblclick(objCallback(this, "ondbclickRoute"))
                 .addClass("autobus_list_item ui-corner-all")
                 .css("opacity", "0.5")
                 .appendTo("#autobus_route_list");
+
+            $('<button></button>')
+                .attr("id", "simulate_" + rt.route_id)
+                .click(objCallback(this, "ondbclickRoute"))
+                .css("margin-left", "100px")
+                .html("sim")
+                .appendTo("#route_" + rt.route_id);
         }
     },
     
@@ -105,6 +112,9 @@ var autobus = {
     
     ondbclickRoute: function (evt) {
         var trip, route_id = this.routeIdFromEvent(evt);
+        
+        evt.stopPropagation();
+        
         if (this.routePaths[route_id]) {
             trip = this.getTripForRoute(route_id);
             this.startBusSimulation(trip);
@@ -227,26 +237,30 @@ var autobus = {
     updateBusPosition: function () {
         this.busMarkerIndex += 1;
         if (this.busMarkerIndex >= this.busMarkerPoints.length) {
-            return;
+            clearInterval(this.interval);
+            this.interval = null;
+            this.busMarker.setMap(null);
         }
         
         this.busMarker.setPosition(this.busMarkerPoints[this.busMarkerIndex]);        
-        setTimeout(objCallback(this, "updateBusPosition"), 1000);        
-        
     },
     
     busMarker: null,
     busMarkerIndex: 0,
     busMarkerPoints: [],
+    interval: null,
     
     startBusSimulation: function (trip) {
         var i, j, points, fraction;
         
-        if (this.busMarker) {
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
             this.busMarker.setMap(null);
-            delete this.busMarker;
-            this.busMarker = null;
         }
+        
+        this.busMarkerPoints = [];
+        this.busMarkerIndex  = 0;
         
         // Generate the bus marker points by interpolating between each stop
         
@@ -269,14 +283,17 @@ var autobus = {
         }
         
         // Create the marker
-        this.busMarker = new google.maps.Marker({
-            position: points[0],
-            map: this.map,
-            title: "bus",
-            icon: "/images/bus.png"
-        });
-        
-        setTimeout(objCallback(this, "updateBusPosition"), 1000);        
+        if (!this.busMarker) {
+            this.busMarker = new google.maps.Marker({
+                position: points[0],
+                map: this.map,
+                title: "bus",
+                icon: "/images/bus.png"
+            });
+        } else {
+            this.busMarker.setMap(this.map);
+        }
+        this.interval = setInterval(objCallback(this, "updateBusPosition"), 1000);        
     },
 
     onRoute: function (route) {
