@@ -47,7 +47,7 @@ var app = {
     },
     
     stopTracking: function () {
-       this.tracking = false;   
+        this.tracking = false;   
     }
 };
 
@@ -61,7 +61,9 @@ $(document).bind("pagechange", function (evt, data) {
             app.startTracking();
             break;
         case "enter_tracking_data":
-        app.stopTracking();
+            if (data.options.fromPage[0].id === "tracking_page") {
+                app.stopTracking();
+            }
             break;
     }
     console.log(evt);
