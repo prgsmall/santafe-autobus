@@ -1,4 +1,4 @@
-/*global $ window document google io console autobusSocket navigator MapIconMaker AcequiaClient setTimeout*/
+/*global $ window document google console navigator MapIconMaker AcequiaClient setTimeout*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -23,7 +23,6 @@ var autobus = {
     onPositionUpdate: function (position) {
         var point = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
         if (!this.currentPositionMarker) {
-        
             this.currentPositionMarker = new google.maps.Marker({
                 position: point,
                 map: this.map,
