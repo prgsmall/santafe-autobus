@@ -1,5 +1,5 @@
 
-/*global $ window document google  MapIconMaker AcequiaClient */
+/*global $ window document google  MapIconMaker AcequiaClient console*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -33,9 +33,11 @@ var app = {
             
             // Initialize the map
             var options = {
-                zoom: 11,
-                center: new google.maps.LatLng(35.6660, -105.9632),
-                mapTypeId: google.maps.MapTypeId.ROADMAP
+                zoom: 11
+              , center: new google.maps.LatLng(35.6660, -105.9632)
+              , mapTypeId: google.maps.MapTypeId.ROADMAP
+              , mapTypeControl: false
+              , streetViewControl: false
             };
             this.map = new google.maps.Map(document.getElementById("map_canvas"), options);
         }
@@ -164,7 +166,7 @@ var app = {
     },
     
     displaySinglePath: function (route_id) {
-        var i;
+        var i, latlngbounds;
         for (i in this.routes) {
             if (i === route_id) {
                 this.setMapForMarkers(i, this.map);
@@ -175,18 +177,20 @@ var app = {
             }
         }
 
-        var latlngbounds = new google.maps.LatLngBounds();
+        latlngbounds = new google.maps.LatLngBounds();
 
-        this.routePaths[route_id].getPath().forEach(function(n){
+        this.routePaths[route_id].getPath().forEach(function (n) {
             latlngbounds.extend(n);
         });
-        console.log(latlngbounds.getCenter().lat() + "  " + latlngbounds.getCenter().lng());
+        console.log(latlngbounds.getCenter().lat()    + "  " + latlngbounds.getCenter().lng());
         console.log(latlngbounds.getNorthEast().lat() + "  " + latlngbounds.getNorthEast().lng());
         console.log(latlngbounds.getSouthWest().lat() + "  " + latlngbounds.getSouthWest().lng());
 
         this.map.setCenter(latlngbounds.getCenter());
-        this.map.fitBounds(latlngbounds);
+        this.map.panToBounds(latlngbounds);
+        //this.map.fitBounds(latlngbounds);
     }
+    
 };
 
 $(document).bind('pageinit', function (evt) {
