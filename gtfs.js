@@ -369,7 +369,9 @@ GeneralTransitFeed.prototype.checkLoad = function (callback) {
     }
 
     if (isDone) {
-        callback();
+        if (callback) {
+            callback();
+        }
     }
 };
 

@@ -15,13 +15,14 @@
         </div>
         <script src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
         <script src="http://node.redfish.com:9091/acequia/acequia.js"></script>
+        <script src="/js/AutobusClient.js"></script>
         <script src="/js/autobus.js"></script>
         <script src="/js/mapiconmaker.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.js"></script>
         <script>
             $(document).ready(function() {
-                autobus.initialize();
+                autobus.init(12, 35.6660, -105.9632, google.maps.MapTypeId.TERRAIN);
             });
         </script>
     </body>

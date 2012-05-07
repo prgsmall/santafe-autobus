@@ -10,12 +10,18 @@ var sfab_clients = {};
 
 var acequiaServer = null;
 
+var feedURI = "http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed";
+
 var onGetRoutes = function (message) {
     acequiaServer.send("", "routes", gtfs.getRoutes(), message.from);
 };
 
 var onGetRoute = function (message) {
     acequiaServer.send("", "route", gtfs.getRouteById(message.body[0].route_id), message.from);
+};
+
+var onRefresh = function (message) {
+    gtfs = GTFS.createGeneralTransitFeed(feedURI, null);    
 };
 
 var startHTTPServer = function () {
@@ -25,6 +31,7 @@ var startHTTPServer = function () {
         tcpPort: false,
         datastore: false
     });
+    acequiaServer.on("refresh", onRefresh);    
     acequiaServer.on("getRoutes", onGetRoutes);
     acequiaServer.on("getRoute", onGetRoute);
     acequiaServer.start();
@@ -48,7 +55,7 @@ var startHTTPServer = function () {
 };
 
 var START = function () {
-    gtfs = GTFS.createGeneralTransitFeed("http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed", startHTTPServer);    
+    gtfs = GTFS.createGeneralTransitFeed(feedURI, startHTTPServer);    
 };
 
 var start = function () {

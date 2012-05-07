@@ -8,37 +8,38 @@
         <title>
         </title>
         <link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.css" />
-        <link rel="stylesheet" href="my.css" />
-        <style>
-            /* App custom styles */
-        </style>
+        <link rel="stylesheet" href="mo.css" />
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
         <script src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
         <script src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
         <script src="/js/mapiconmaker.js"></script>
+        <script src="/js/AutobusClient.js"></script>
     </head>
     <body>
         <div data-role="page" data-theme="b" id="home">
             <div data-theme="b" data-role="header">
-                <h5>
+                <h3>
                     Santa Fe Trails
-                </h5>
+                </h3>
             </div>
             <div data-role="content">
                 <div id="map_canvas" style="width:300px;height:350px"></div>
-                <a data-role="button" data-transition="fade" href="#bus_routes_page" data-icon="arrow-r" data-iconpos="right">
-                    Select A Route
-                </a>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <div data-role="page" data-theme="b" id="bus_routes_page">
-            <div data-theme="b" data-role="header">
+            <div data-theme="b" data-role="header" data-position="fixed">
                 <h3>
                     Bus Routes
                 </h3>
-                <a data-role="button" data-transition="fade" data-theme="b" href="#home" data-icon="home" data-iconpos="left">
-                    Home
-                </a>
             </div>
             <div data-role="content">
                 <ul data-role="listview" data-divider-theme="b" data-inset="false">
@@ -94,6 +95,15 @@
                     </li>
                 </ul>
             </div>
+            <div data-role="footer" data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
         </div>
         <div data-role="page" data-theme="b" id="route_1">
             <div data-theme="b" data-role="header">
@@ -109,6 +119,16 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
+
         </div>
         <div data-role="page" data-theme="b" id="route_2">
             <div data-theme="b" data-role="header">
@@ -123,6 +143,15 @@
                 <a data-role="button" data-transition="fade" href="#bus_schedule_page" data-icon="arrow-r" data-iconpos="right">
                     Bus Schedule
                 </a>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <div data-role="page" data-theme="b" id="route_4">
@@ -139,6 +168,16 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
+
         </div>
         <div data-role="page" data-theme="b" id="route_5">
             <div data-theme="b" data-role="header">
@@ -153,6 +192,15 @@
                 <a data-role="button" data-transition="fade" href="#bus_schedule_page" data-icon="arrow-r" data-iconpos="right">
                     Bus Schedule
                 </a>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <div data-role="page" data-theme="b" id="route_6">
@@ -169,6 +217,15 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
         </div>
         <div data-role="page" data-theme="b" id="route_21">
             <div data-theme="b" data-role="header">
@@ -183,6 +240,15 @@
                 <a data-role="button" data-transition="fade" href="#bus_schedule_page" data-icon="arrow-r" data-iconpos="right">
                     Bus Schedule
                 </a>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <div data-role="page" data-theme="b" id="route_22">
@@ -199,6 +265,15 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
         </div>
         <div data-role="page" data-theme="b" id="route_24">
             <div data-theme="b" data-role="header">
@@ -213,6 +288,15 @@
                 <a data-role="button" data-transition="fade" href="#bus_schedule_page" data-icon="arrow-r" data-iconpos="right">
                     Bus Schedule
                 </a>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <div data-role="page" data-theme="b" id="route_26">
@@ -229,6 +313,15 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>            			
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
         </div>
         <div data-role="page" data-theme="b" id="route_M">
             <div data-theme="b" data-role="header">
@@ -244,6 +337,15 @@
                     Bus Schedule
                 </a>
             </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
         </div>
         <div data-role="page" data-theme="b" id="bus_schedule_page">
             <div data-theme="b" data-role="header">
@@ -258,6 +360,33 @@
                 <h3 id="bus_schedule_route">Root Schedule</h3>
                 <div id="bus_schedule">
                 </div>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
+            </div>
+        </div>
+        <div data-role="page" data-theme="b" id="payment_page">
+            <div data-theme="b" data-role="header">
+                <h3>
+                    Payment
+                </h3>
+            </div>
+            <div data-role="content">
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+            	<div data-role="navbar">
+            		<ul>
+            			<li><a href="#home">Home</a></li>
+            			<li><a href="#bus_routes_page">Routes</a></li>
+            			<li><a href="#payment_page">Payment</a></li>
+            		</ul>
+            	</div>
             </div>
         </div>
         <script src="http://node.redfish.com:9091/acequia/acequia.js"></script>
