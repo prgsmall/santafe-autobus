@@ -50,6 +50,10 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
         mapTypeId: mapType
     }, mapOptions || {});
     this.map = new google.maps.Map(document.getElementById("map_canvas"), options);
+    
+//    google.maps.event.addListener(this.map, "resize", objCallback(this, "onResize"));
+
+    google.maps.event.addListener(this.map, "idle", objCallback(this, "triggerResize"));
 
     // Set up the acequia client and connect to the server
     this.acequiaClient = new AcequiaClient("autobus_" + Math.random(), "3001");
@@ -61,6 +65,16 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
     
     // Start getting position updates
     this.getCurrentPosition();
+};
+
+AutobusClient.prototype.triggerResize = function () {
+    google.maps.event.trigger(this.map, "resize");
+    this.map.setZoom(this.map.getZoom());  
+};
+
+AutobusClient.prototype.onResize = function (evt) {
+    this.map.setZoom(this.map.getZoom() + 1);
+    this.map.setZoom(this.map.getZoom() - 1);
 };
 
 AutobusClient.prototype.getCurrentPosition = function () {
@@ -105,7 +119,7 @@ AutobusClient.prototype.onPositionUpdate = function (position) {
         this.currentPositionMarker.setPosition(point);
     }
     
-    setTimeout(objCallback(this, "getCurrentPosition"), 2000);
+    //setTimeout(objCallback(this, "getCurrentPosition"), 2000);
 };
 
 AutobusClient.prototype.onRoutes = function (message) {
