@@ -1,5 +1,5 @@
 
-/*global $ window document google MapIconMaker AutobusClient google console*/
+/*global $ window document google MapIconMaker AutobusClient google console InfoBubble*/
 
 var app = new AutobusClient();
 
@@ -15,27 +15,29 @@ app.onRoutes = function (message) {
     }
 };
 
+app.infowindow = new InfoBubble({
+    padding: 10,
+    borderRadius: 10,
+    arrowSize: 15,
+    arrowStyle: 0,
+    arrowPosition: 50,
+    maxWidth: 150,
+    borderColor: "#ccc",
+    backgroundColor: "#fff"
+});
+
 app.onRoute = function (route) {
-    var i, routePath, stop, point, marker, infowindow,
+    var i, routePath, stop, point, marker,
     routeCoordinates = [], color,
     
     onclick = function (i, m) {
         return function () {
-            var times, content, j;
-            times = app.getNextArrivalsForStop(m.route_id, m.stop_id);
-            content = "<div style='height:100px;overflow:hidden;'>";
-            content += "<div style='font-size:12px;font-weight:bold;'>" + m.title + "</div>";
-            content += "<a href='#next_buses' style='font-size:12px;'>Next Buses</a>";
-/*            content += "<div style='height:90px;overflow:auto;'>";
-            for (j = 0; j < times.length; j += 1) {
-                content += "<div>" + times[j].time;
-                // content += (times[j].direction_id === "0") ? " outbound" : " inbound";
-                content += "</div>";
-            }
-            content += "</div>"
-*/
+            var content, onclick = "\"app.displayNextBuses('" + m.route_id + "','" + m.stop_id + "');\"";
+            content = "<div class='info'>";
+            content += "<div class='info-title'>" + m.title + "</div>";
+            content += "<a href='#next_buses' onclick=" + onclick + ">Next Buses</a>";
             content += "</div>";
-            i.content = content;
+            i.setContent(content);
             i.open(this.map, m);
         };
     };
@@ -44,10 +46,6 @@ app.onRoute = function (route) {
     
     this.markers[route.route_id] = [];
     
-    infowindow = new google.maps.InfoWindow({
-        content: "blah"
-    });
-
     for (i = 0; i < route.stop_times.length; i += 1) {
         stop = route.stop_times[i].stop;
         point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
@@ -64,7 +62,7 @@ app.onRoute = function (route) {
         
         this.markers[route.route_id].push(marker);
         
-        google.maps.event.addListener(marker, 'click', onclick(infowindow, marker));
+        google.maps.event.addListener(marker, 'click', onclick(this.infowindow, marker));
     }
         
     routePath = new google.maps.Polyline({
@@ -78,6 +76,21 @@ app.onRoute = function (route) {
     $("#route_" + route.route_id).css("opacity", "1.0");
     
     this.routePaths[route.route_id] = routePath;
+};
+
+app.displayNextBuses = function (route_id, stop_id) {
+    var times, j, content = "", rt = this.routes[route_id];
+    
+    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
+    
+    times = this.getNextArrivalsForStop(route_id, stop_id);
+    for (j = 0; j < times.length; j += 1) {
+        content += "<div>" + times[j].time;
+        // content += (times[j].direction_id === "0") ? " outbound" : " inbound";
+        content += "</div>";
+    }
+    
+    $("#next_buses_list").empty().html(content);
 };
 
 app.displaySinglePath = function (route_id) {

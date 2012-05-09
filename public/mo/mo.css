@@ -4,3 +4,12 @@
 .text-align-right {
   text-align: right;
 }
+
+.info {
+    height:50px;
+    font-size:12px;
+}
+
+.info-title {
+    font-weight: bold;
+}

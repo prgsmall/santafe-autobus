@@ -14,6 +14,7 @@
         <script src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
         <script src="/js/mapiconmaker.js"></script>
         <script src="/js/AutobusClient.js"></script>
+        <script src="/js/infobubble.js"></script>
     </head>
     <body>
         <div data-role="page" data-theme="b" id="home">
@@ -365,11 +366,36 @@
         </div>
         <div data-role="page" data-theme="b" id="next_buses">
             <div data-theme="b" data-role="header">
-                <h3>
-                    Next Buses
+                <h3 id="next_bus_title">
+                    Next Bus
                 </h3>
+                <a data-role="button" data-transition="fade" href="#where_am_i" data-icon="arrow-l" data-iconpos="left">
+                    Back
+                </a>
             </div>
             <div data-role="content">
+                <ul data-role="listview" data-divider-theme="b" data-inset="true" id="next-bus-listview">
+                    <li data-role="list-divider" role="heading" id="next-bus-listview-title">
+                        Select a Bus Time
+                    </li>
+                    <li data-theme="c">
+                        <a href="#page1" data-transition="slide">
+                            11:00
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#page1" data-transition="slide">
+                            11:30
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#page1" data-transition="slide">
+                            12:00
+                        </a>
+                    </li>
+                </ul>
+                <div id="next_buses_list">
+                </div>
             </div>
             <div data-role="footer"  data-position="fixed" data-theme="b">		
                     <a href="#home" data-role="button" data-icon="home">Home</a>
