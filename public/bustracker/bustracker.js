@@ -1,5 +1,5 @@
 
-/*global $ window document */
+/*global $ window document AcequiaClient navigator setTimeout*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -25,11 +25,17 @@ var app = {
     },
     
     onPositionUpdate: function (position) {
+        var ll, center, markers, src;
         this.acequiaClient.send("busPosition", 
             {route_id: this.routeId,
              lat: position.coords.latitude,
              lon: position.coords.longitude}
         );
+        ll = position.coords.latitude + "," + position.coords.longitude;
+        center = "&center=" + ll;
+        markers = "&markers=color:blue|label:" + this.routeId + "|" + ll;
+        src = "https://maps.googleapis.com/maps/api/staticmap?zoom=15&size=288x300&sensor=false" + center + markers;
+        $("#map-image").attr("src", src);
         
         if (this.tracking) {
             setTimeout(objCallback(this, "getCurrentPosition"), 5000);
@@ -61,7 +67,7 @@ $(document).bind("pagechange", function (evt, data) {
             app.startTracking();
             break;
         case "enter_tracking_data":
-            if (data.options.fromPage[0].id === "tracking_page") {
+            if (data.options.fromPage && data.options.fromPage[0].id === "tracking_page") {
                 app.stopTracking();
             }
             break;
