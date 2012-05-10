@@ -1,4 +1,5 @@
-/*global $ window document google MapIconMaker AutobusClient google console InfoBubble*/
+/*global $ window document google MapIconMaker AutobusClient 
+  google console InfoBubble setInterval objCallback*/
 
 var app = new AutobusClient();
 
@@ -78,7 +79,7 @@ app.onRoute = function (route) {
 };
 
 app.displayNextBuses = function (route_id, stop_id) {
-    var times, j, rt = this.routes[route_id];
+    var times, j, onclick, rt = this.routes[route_id];
     
     $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
     
@@ -86,11 +87,20 @@ app.displayNextBuses = function (route_id, stop_id) {
     
     times = this.getNextArrivalsForStop(route_id, stop_id);
     for (j = 0; j < times.length; j += 1) {
-        $('<li data-theme="c"><a href="#count-down" data-transition="slide">' +
+        onclick = "onclick='app.setSelectedBusDateTime(\"" + times[j].time + "\");'";
+        $('<li data-theme="c"><a href="#count-down" data-transition="slide"' + onclick + '>' +
            times[j].time + '</a></li>').appendTo("#next-bus-listview");        
     }
     
     $("#next-bus-listview").listview('refresh');
+};
+
+app.setSelectedBusDateTime = function(txt) {
+    var timeParts = txt.split(":");
+    this.selectedBusDateTime = new Date();
+    this.selectedBusDateTime.setHours(parseInt(timeParts[0], 10));
+    this.selectedBusDateTime.setMinutes(parseInt(timeParts[1], 10));
+    this.selectedBusDateTime.setSeconds(parseInt(timeParts[2], 10));
 };
 
 app.displaySinglePath = function (route_id) {
@@ -186,6 +196,47 @@ app.displayWhereIAm = function () {
     }
 };
 
+app.countdownInterval = null;
+app.selectedBusDateTime = null;
+
+app.decrementCoundownTimer = function () {
+    var now, timeDiff, txtTime, time, pad,
+    m = 60;
+    h = 3600;
+    
+    pad = function (n) {
+        var s = n.toString();
+        return s.length < 2 ? '0' + s : s;
+    };
+    
+    now = new Date();
+    time = app.selectedBusDateTime.getTime() - now.getTime();
+    if (time <= 0) {
+        txtTime = "00:00:00";
+        this.stopCountdownTimer();
+    } else {
+        // convert to seconds
+        time = Math.floor(time/1000);
+        hours = Math.floor(time/3600);
+        time = time % 3600;
+        minutes = Math.floor(time / 60);
+        seconds = time % 60;
+
+        txtTime = pad(hours) + ":" +  pad(minutes) + ":" +  pad(seconds);
+    }
+            
+    $("#countDownText").html(txtTime);
+};
+
+app.stopCountdownTimer = function () {
+    clearInterval(this.countdownInterval);
+    this.countdownInterval = null;
+};
+
+app.startCountdownTimer = function () {
+    this.countdownInterval = setInterval(objCallback(this, "decrementCoundownTimer"), 1000);
+};
+
 $(document).bind('pageinit', function (evt) {
     $("#map_canvas").hide();
     app.init(11, 35.6660, -105.9632, 
@@ -197,22 +248,33 @@ $(document).bind('pageinit', function (evt) {
 
 $(document).bind("pagechange", function (evt, data) {
     var map_canvas;
-    if (data.toPage[0].id === "bus_schedule_page") {
+    switch (data.toPage[0].id) {
+    case "bus_schedule_page":
         $("#bus_schedule_route").html(data.options.fromPage[0].id);
-    } else if (data.toPage[0].id === "home") {
+        break;
+    case "home":
         app.showMap(false);
-    } else if (data.toPage[0].id === "where_am_i") {
+        break;
+    case "where_am_i":
         app.showMap(true);
         app.triggerResize();
         map_canvas = $("#map_canvas").detach();
         map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
         app.displayWhereIAm();
-    } else if (data.toPage[0].id.indexOf("route_") === 0) {
-        app.showMap(true);
-        app.triggerResize();
-        app.displaySinglePath(app.routeIdFromEleId(data.toPage[0].id));
-        map_canvas = $("#map_canvas").detach();
-        map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+        break;
+    case "count-down":
+        app.startCountdownTimer();
+        break;
+        
+    default:
+        if (data.toPage[0].id.indexOf("route_") === 0) {
+            app.showMap(true);
+            app.triggerResize();
+            app.displaySinglePath(app.routeIdFromEleId(data.toPage[0].id));
+            map_canvas = $("#map_canvas").detach();
+            map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+        }
+        break;
     }
 });
 
