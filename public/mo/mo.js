@@ -1,4 +1,3 @@
-
 /*global $ window document google MapIconMaker AutobusClient google console InfoBubble*/
 
 var app = new AutobusClient();
@@ -79,18 +78,19 @@ app.onRoute = function (route) {
 };
 
 app.displayNextBuses = function (route_id, stop_id) {
-    var times, j, content = "", rt = this.routes[route_id];
+    var times, j, rt = this.routes[route_id];
     
     $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
     
+    $("#next-bus-listview-title~li").remove();
+    
     times = this.getNextArrivalsForStop(route_id, stop_id);
     for (j = 0; j < times.length; j += 1) {
-        content += "<div>" + times[j].time;
-        // content += (times[j].direction_id === "0") ? " outbound" : " inbound";
-        content += "</div>";
+        $('<li data-theme="c"><a href="#count-down" data-transition="slide">' +
+           times[j].time + '</a></li>').appendTo("#next-bus-listview");        
     }
     
-    $("#next_buses_list").empty().html(content);
+    $("#next-bus-listview").listview('refresh');
 };
 
 app.displaySinglePath = function (route_id) {

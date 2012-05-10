@@ -63,15 +63,14 @@ $(document).bind('pageinit', function (evt) {
 
 $(document).bind("pagechange", function (evt, data) {
     switch (data.toPage[0].id) {
-        case "tracking_page":
-            app.startTracking();
-            break;
-        case "enter_tracking_data":
-            if (data.options.fromPage && data.options.fromPage[0].id === "tracking_page") {
-                app.stopTracking();
-            }
-            break;
+    case "tracking_page":
+        app.startTracking();
+        break;
+    case "enter_tracking_data":
+        if (data.options.fromPage && data.options.fromPage[0].id === "tracking_page") {
+            app.stopTracking();
+        }
+        break;
     }
-    console.log(evt);
 });
 

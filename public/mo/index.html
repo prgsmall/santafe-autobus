@@ -369,7 +369,7 @@
                 <h3 id="next_bus_title">
                     Next Bus
                 </h3>
-                <a data-role="button" data-transition="fade" href="#where_am_i" data-icon="arrow-l" data-iconpos="left">
+                <a data-role="button" data-transition="fade" href="javascript:history.back(-1);" data-icon="arrow-l" data-iconpos="left">
                     Back
                 </a>
             </div>
@@ -378,24 +378,25 @@
                     <li data-role="list-divider" role="heading" id="next-bus-listview-title">
                         Select a Bus Time
                     </li>
-                    <li data-theme="c">
-                        <a href="#page1" data-transition="slide">
-                            11:00
-                        </a>
-                    </li>
-                    <li data-theme="c">
-                        <a href="#page1" data-transition="slide">
-                            11:30
-                        </a>
-                    </li>
-                    <li data-theme="c">
-                        <a href="#page1" data-transition="slide">
-                            12:00
-                        </a>
-                    </li>
                 </ul>
-                <div id="next_buses_list">
-                </div>
+            </div>
+            <div data-role="footer"  data-position="fixed" data-theme="b">		
+                    <a href="#home" data-role="button" data-icon="home">Home</a>
+                	<a href="#bus_routes_page" data-role="button" data-icon="grid">Route</a>
+                	<a href="#where_am_i" data-role="button" data-icon="search">Find</a>
+                	<a href="#payment_page" data-role="button" data-icon="star">Pay</a>
+            </div>
+        </div>
+        <div data-role="page" data-theme="b" id="count-down">
+            <div data-theme="b" data-role="header">
+                <h3 id="next_bus_title">
+                    Count Down
+                </h3>
+                <a data-role="button" data-transition="fade" href="javascript:history.back(-1);" data-icon="arrow-l" data-iconpos="left">
+                    Back
+                </a>
+            </div>
+            <div data-role="content">
             </div>
             <div data-role="footer"  data-position="fixed" data-theme="b">		
                     <a href="#home" data-role="button" data-icon="home">Home</a>
