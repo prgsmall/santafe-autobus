@@ -1,8 +1,18 @@
 /*global $ window document google MapIconMaker AutobusClient 
-  google console InfoBubble setInterval objCallback*/
+  google console InfoBubble setInterval clearInterval objCallback*/
+
+
+var disableButtons = function () {
+    $("div[data-role=footer]>a").addClass('ui-disabled');
+};
+
+var enableButtons = function () {
+    $("div[data-role=footer]>a").removeClass('ui-disabled');
+};
+
+
 
 var app = new AutobusClient();
-
 
 app.onRoutes = function (message) {
     var i, rt, routes = message.body;
@@ -81,7 +91,7 @@ app.onRoute = function (route) {
 };
 
 app.checkRoutes = function () {
-    var i;
+    var route_id;
     for (route_id in this.routes) {
         if (typeof(this.routes[route_id].trips) === "undefined") {
             return;
@@ -133,7 +143,7 @@ app.displayNextBuses = function (route_id, stop_id) {
     */
 };
 
-app.setSelectedBusDateTime = function(txt) {
+app.setSelectedBusDateTime = function (txt) {
     var timeParts = txt.split(":");
     this.selectedBusDateTime = new Date();
     this.selectedBusDateTime.setHours(parseInt(timeParts[0], 10));
@@ -198,7 +208,7 @@ app.centerMap = function (latlng, r) {
 
 app.displayWhereIAm = function () {
     
-    var i, bounds, route_id, m, stops = [];
+    var i, bounds, route_id, m, stops = [], routes = {};
 
     // Hide any paths that are displayed    
     for (route_id in this.routes) {
@@ -215,6 +225,7 @@ app.displayWhereIAm = function () {
             m = this.markers[route_id][i];
             if (bounds.contains(m.getPosition())) {
                 stops.push(m);
+                routes[route_id] = route_id;
             }
         }
     }
@@ -223,15 +234,19 @@ app.displayWhereIAm = function () {
     for (i = 0; i < stops.length; i += 1) {
         stops[i].setMap(this.map);
     }
+    
+    // Display the bus lines
+    for (route_id in routes) {
+        this.setMapForPath(route_id, this.map);
+    }
+    
 };
 
 app.countdownInterval = null;
 app.selectedBusDateTime = null;
 
 app.decrementCoundownTimer = function () {
-    var now, timeDiff, txtTime, time, pad,
-    m = 60;
-    h = 3600;
+    var now, timeDiff, txtTime, time, pad, hours, minutes, seconds;
     
     pad = function (n) {
         var s = n.toString();
@@ -245,8 +260,8 @@ app.decrementCoundownTimer = function () {
         this.stopCountdownTimer();
     } else {
         // convert to seconds
-        time = Math.floor(time/1000);
-        hours = Math.floor(time/3600);
+        time = Math.floor(time / 1000);
+        hours = Math.floor(time / 3600);
         time = time % 3600;
         minutes = Math.floor(time / 60);
         seconds = time % 60;
@@ -267,12 +282,13 @@ app.startCountdownTimer = function () {
     this.countdownInterval = setInterval(objCallback(this, "decrementCoundownTimer"), 1000);
 };
 
-var disableButtons = function () {
-    $("div[data-role=footer]>a").addClass('ui-disabled');
-};
-
-var enableButtons = function () {
-    $("div[data-role=footer]>a").removeClass('ui-disabled');
+var setMapParent = function (pageId, append) {
+    var map_canvas = $("#map_canvas").detach();
+    if (typeof(append) === "undefined") {
+        map_canvas.prependTo("#" + pageId + " div[data-role=content]");        
+    } else {
+        map_canvas.appendTo("#" + pageId + " div[data-role=content]");
+    }
 };
 
 $(document).ready(function (evt) {
@@ -285,15 +301,14 @@ $(document).ready(function (evt) {
 });
 
 $(document).bind("pagechange", function (evt, data) {
-    var map_canvas;
+   
     switch (data.toPage[0].id) {
     case "bus_schedule_page":
         $("#bus_schedule_route").html(data.options.fromPage[0].id);
         break;
 
     case "home":
-        map_canvas = $("#map_canvas").detach();
-        map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+        setMapParent(data.toPage[0].id);
         try {
             app.showAllPaths();
             if (app.circ) {
@@ -305,19 +320,18 @@ $(document).bind("pagechange", function (evt, data) {
         break;
 
     case "where_am_i":
-        map_canvas = $("#map_canvas").detach();
-        map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+        setMapParent(data.toPage[0].id);
         app.displayWhereIAm();
         break;
         
     case "count-down":
+        setMapParent(data.toPage[0].id, true);
         app.startCountdownTimer();
         break;
         
     default:
         if (data.toPage[0].id.indexOf("route_") === 0) {
-            map_canvas = $("#map_canvas").detach();
-            map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+            setMapParent(data.toPage[0].id);
             app.displaySinglePath(app.routeIdFromEleId(data.toPage[0].id));
         }
         break;
