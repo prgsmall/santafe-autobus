@@ -50,8 +50,6 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
         mapTypeId: mapType
     }, mapOptions || {});
     this.map = new google.maps.Map(document.getElementById("map_canvas"), options);
-    
-    google.maps.event.addListener(this.map, "idle", objCallback(this, "triggerResize"));
 
     // Set up the acequia client and connect to the server
     this.acequiaClient = new AcequiaClient("autobus_" + Math.random(), "3001");
@@ -65,9 +63,8 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
     this.getCurrentPosition();
 };
 
-AutobusClient.prototype.triggerResize = function () {
-    google.maps.event.trigger(this.map, "resize");
-    this.map.setZoom(this.map.getZoom());  
+AutobusClient.prototype.centerMapOnCurrentPositon = function () {
+    this.map.setCenter(this.currentPositionMarker.getPosition());
 };
 
 AutobusClient.prototype.getCurrentPosition = function () {
@@ -162,16 +159,31 @@ AutobusClient.prototype.dateFromTimeString = function (timeString) {
     return ret;
 };
 
-AutobusClient.prototype.getTripForRoute = function (route_id) {
-    var i, route = this.routes[route_id],
+AutobusClient.prototype.getTripForRoute = function (route_id, directionId) {
+    var i, route, service_id;
+    
+    if (typeof(directionId) === "undefined") {
+        directionId = "0";
+    }
+    route = this.routes[route_id];
+    
     service_id = this.getServiceId();
+    
     for (i = 0; i < route.trips.length; i += 1) {
-        if (route.trips[i].service_id === service_id) {
+        if (route.trips[i].service_id === service_id &&
+            route.trips[i].direction_id === directionId) {
             return route.trips[i];
         }
     }
     
     return null;
+};
+
+AutobusClient.prototype.getTripsForRoute = function (route_id) {
+    return {
+        outbound: this.getTripForRoute(route_id, "0"),
+        inbound:  this.getTripForRoute(route_id, "1")
+    };
 };
 
 AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, time) {
@@ -216,4 +228,25 @@ AutobusClient.prototype.setMapForPath = function (route_id, map) {
     this.setMapForMarkers(route_id, map);
 };
 
+AutobusClient.prototype.setMapForOnlyPath = function (route_id, map, andMarkers) {
+    this.routePaths[route_id].setMap(map);
+};
+
+AutobusClient.prototype.showAllPaths = function () {
+    var route_id, i, latlngbounds = new google.maps.LatLngBounds();
+
+    for (route_id in this.markers) {
+        for (i = 0; i < this.markers[route_id].length; i += 1) {
+            latlngbounds.extend(this.markers[route_id][i].getPosition());
+        }
+    }
+    this.map.fitBounds(latlngbounds);
+    this.map.setCenter(latlngbounds.getCenter());
+
+    for (route_id in this.routes) {
+        this.setMapForMarkers(route_id, null);
+        this.setMapForOnlyPath(route_id, this.map);
+    }
+    this.map.setZoom(this.map.getZoom() + 1);
+}
 

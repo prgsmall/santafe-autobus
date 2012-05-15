@@ -69,30 +69,68 @@ app.onRoute = function (route) {
         path: routeCoordinates,
         strokeColor: color,
         strokeOpacity: 1.0,
-        strokeWeight: 2
+        strokeWeight: 2,
+        map: this.map
     });
-      
-    routePath.setMap(null);
+
     $("#route_" + route.route_id).css("opacity", "1.0");
     
     this.routePaths[route.route_id] = routePath;
+    
+    this.checkRoutes();
+};
+
+app.checkRoutes = function () {
+    var i;
+    for (route_id in this.routes) {
+        if (typeof(this.routes[route_id].trips) === "undefined") {
+            return;
+        }
+    }
+    enableButtons();
 };
 
 app.displayNextBuses = function (route_id, stop_id) {
-    var times, j, onclick, rt = this.routes[route_id];
+    var times, j, onclick, rt = this.routes[route_id], count;
     
     $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
     
     $("#next-bus-listview-title~li").remove();
     
     times = this.getNextArrivalsForStop(route_id, stop_id);
-    for (j = 0; j < times.length; j += 1) {
+    
+    count = Math.min(7, times.length);
+    
+    for (j = 0; j < count; j += 1) {
         onclick = "onclick='app.setSelectedBusDateTime(\"" + times[j].time + "\");'";
         $('<li data-theme="c"><a href="#count-down" data-transition="slide"' + onclick + '>' +
            times[j].time + '</a></li>').appendTo("#next-bus-listview");        
     }
     
-    $("#next-bus-listview").listview('refresh');
+    try {
+        $("#next-bus-listview").listview('refresh');
+    } catch (e) {
+        // Eat the exception
+    }
+
+    /*
+    $("#bus-time-buttons>legend~input").remove();
+    $("#bus-time-buttons>legend~label").remove();
+
+    for (j = 0; j < count; j += 1) {
+        $("<input/>")
+            .attr("name", "bus-time-radiobutton")
+            .attr("id", "stop_" + j)
+            .attr("value", times[j].time)
+            .attr("type", "radio")
+            .appendTo("#bus-time-buttons");
+
+        $("<label/>")
+            .attr("for", "stop_" + j)
+            .html(times[j].time)
+            .appendTo("#bus-time-buttons");
+    }
+    */
 };
 
 app.setSelectedBusDateTime = function(txt) {
@@ -120,51 +158,42 @@ app.displaySinglePath = function (route_id) {
     this.routePaths[route_id].getPath().forEach(function (n) {
         latlngbounds.extend(n);
     });
-    console.log(latlngbounds.getCenter().lat()    + "  " + latlngbounds.getCenter().lng());
-    console.log(latlngbounds.getNorthEast().lat() + "  " + latlngbounds.getNorthEast().lng());
-    console.log(latlngbounds.getSouthWest().lat() + "  " + latlngbounds.getSouthWest().lng());
 
+    this.map.fitBounds(latlngbounds);
     this.map.setCenter(latlngbounds.getCenter());
-    this.map.panToBounds(latlngbounds);
-    //this.map.fitBounds(latlngbounds);
+    
+    this.circ.setMap(null);
 };
 
-app.centerMap = function (latlng, r)
-{
-    // latlng is the point of the zipcode
-    var circ = new google.maps.Circle({
-        center: latlng,
-        map: this.map,
-        radius: r * 1609.0,
-        fillOpacity: 0,
-        fillColor: "#cccccc",
-        strokeOpacity: 0.8,
-        strokeColor: "#cccccc"
-    });
+app.circ = null;
+
+app.centerMap = function (latlng, r) {
+    r = r * 1609.0;
     
+    if (!this.circ) {
+        this.circ = new google.maps.Circle({
+            center: latlng,
+            map: this.map,
+            radius: r,
+            fillOpacity: 0,
+            fillColor: "#cccccc",
+            strokeOpacity: 0.8,
+            strokeColor: "#cccccc"
+        });
+    } else {
+        this.circ.setCenter(latlng);
+        this.circ.setRadius(r);
+        this.circ.setMap(this.map);
+    }
+        
     this.map.setCenter(latlng);
-    this.map.fitBounds(circ.getBounds());
+    this.map.fitBounds(this.circ.getBounds());
     this.map.setZoom(this.map.getZoom() + 1);
 
     // updates markers
     google.maps.event.trigger(this.map, 'resize');
     
-    return circ.getBounds();
-};
-
-app.triggerResize = function () {
-    google.maps.event.trigger(this.map, "resize");
-    this.map.setZoom(this.map.getZoom());  
-};
-
-app.showMap = function (show) {
-    if (show) {
-        $("#map_canvas").show();
-        $("#home_image").hide();
-    } else {
-        $("#map_canvas").hide();
-        $("#home_image").show();
-    }
+    return this.circ.getBounds();
 };
 
 app.displayWhereIAm = function () {
@@ -234,11 +263,20 @@ app.stopCountdownTimer = function () {
 };
 
 app.startCountdownTimer = function () {
+    this.decrementCoundownTimer();
     this.countdownInterval = setInterval(objCallback(this, "decrementCoundownTimer"), 1000);
 };
 
-$(document).bind('pageinit', function (evt) {
-    $("#map_canvas").hide();
+var disableButtons = function () {
+    $("div[data-role=footer]>a").addClass('ui-disabled');
+};
+
+var enableButtons = function () {
+    $("div[data-role=footer]>a").removeClass('ui-disabled');
+};
+
+$(document).ready(function (evt) {
+    disableButtons();
     app.init(11, 35.6660, -105.9632, 
              google.maps.MapTypeId.ROADMAP,
              { mapTypeControl: false
@@ -252,27 +290,35 @@ $(document).bind("pagechange", function (evt, data) {
     case "bus_schedule_page":
         $("#bus_schedule_route").html(data.options.fromPage[0].id);
         break;
+
     case "home":
-        app.showMap(false);
+        map_canvas = $("#map_canvas").detach();
+        map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+        try {
+            app.showAllPaths();
+            if (app.circ) {
+                app.circ.setMap(null);
+            }
+            app.infowindow.close();
+        } catch (e) {
+        }
         break;
+
     case "where_am_i":
-        app.showMap(true);
-        app.triggerResize();
         map_canvas = $("#map_canvas").detach();
         map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
         app.displayWhereIAm();
         break;
+        
     case "count-down":
         app.startCountdownTimer();
         break;
         
     default:
         if (data.toPage[0].id.indexOf("route_") === 0) {
-            app.showMap(true);
-            app.triggerResize();
-            app.displaySinglePath(app.routeIdFromEleId(data.toPage[0].id));
             map_canvas = $("#map_canvas").detach();
             map_canvas.prependTo("#" + data.toPage[0].id + " div[data-role=content]");
+            app.displaySinglePath(app.routeIdFromEleId(data.toPage[0].id));
         }
         break;
     }
