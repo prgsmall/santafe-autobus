@@ -17,6 +17,7 @@ var utils = require("./utils");
 
 var GTFSReader = function (uri, gtfsobj) {
     this.gtfsobj = gtfsobj;
+    this.version = "";
     
     var parser = new FeedParser();
     parser.parseUrl(uri, utils.objCallback(this, "onfeed"));
@@ -30,6 +31,8 @@ GTFSReader.prototype.onfeed = function (error, meta, articles) {
         start    = articles[0].description.indexOf("href=") + 6;
         end      =  articles[0].description.indexOf('"', start);
         file_url = articles[0].description.substring(start, end);
+        
+        this.version = file_url;
         
         file = this.gtfsobj.dataDir + url.parse(file_url).pathname.split('/').pop();
         if (path.existsSync(file)) {
@@ -92,6 +95,8 @@ GTFSReader.prototype.unzipFeedFiles = function (file_name) {
 var GeneralTransitFeed = function (uri, callback) {
     this.dataset = {};
     
+    this.version = "";
+    
     this.feedFiles = ['agency', 'calendar', 'calendar_dates', 'fare_attributes',
                       'fare_rules', 'feed_info', 'frequencies', 'routes', 'shapes', 
                       'stops', 'stop_times', 'transfers', 'trips'];
@@ -100,11 +105,15 @@ var GeneralTransitFeed = function (uri, callback) {
     this.dataDir = __dirname + "/data/";
     utils.mkdirp(this.dataDir, 0755);
     
-    var gtfsReader = new GTFSReader(uri, this);
+    this.gtfsReader = new GTFSReader(uri, this);
+};
+
+GeneralTransitFeed.prototype.getVersion = function () {
+    return this.gtfsReader.version;
 };
 
 GeneralTransitFeed.prototype.getAgency = function () {
-    return this.dataset.agency;
+    return this.dataset.agency[0];
 };
 
 GeneralTransitFeed.prototype.getCalendars = function () {

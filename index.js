@@ -12,6 +12,15 @@ var acequiaServer = null;
 
 var feedURI = "http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed";
 
+var onGetVersion = function (message) {
+    var response = {
+        version: gtfs.getVersion(),
+        agency: gtfs.getAgency()
+    };
+
+    acequiaServer.send("", "version", response, message.from);    
+};
+
 var onGetRoutes = function (message) {
     acequiaServer.send("", "routes", gtfs.getRoutes(), message.from);
 };
@@ -34,6 +43,7 @@ var startHTTPServer = function () {
     acequiaServer.on("refresh", onRefresh);    
     acequiaServer.on("getRoutes", onGetRoutes);
     acequiaServer.on("getRoute", onGetRoute);
+    acequiaServer.on("getVersion", onGetVersion);    
     acequiaServer.start();
     
     app = express.createServer();

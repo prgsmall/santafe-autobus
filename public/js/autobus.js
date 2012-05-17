@@ -12,8 +12,8 @@ Autobus.prototype = new AutobusClient();
 
 var autobus = new Autobus();
 
-autobus.onRoutes = function (message) {
-    var i, rt, routes = message.body;
+autobus.onRoutes = function (routes) {
+    var i, rt;
     
     for (i = 0; i < routes.length; i += 1) {
         rt = routes[i];
@@ -60,18 +60,6 @@ autobus.toggleRoute = function (route_id) {
         this.setMapForPath(route_id, null);
         $("#route_" + route_id).css("opacity", "0.5");
     }
-};
-
-autobus.setMapForMarkers = function (route_id, map) {
-    var i;
-    for (i = 0; i < this.markers[route_id].length; i += 1) {
-        this.markers[route_id][i].setMap(map);
-    }
-};
-
-autobus.setMapForPath = function (route_id, map) {
-    this.routePaths[route_id].setMap(map);
-    this.setMapForMarkers(route_id, map);
 };
 
 autobus.onClickStartSimulation = function (evt) {

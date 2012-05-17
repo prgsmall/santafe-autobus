@@ -5,11 +5,10 @@
  *  Copyright (c) 2012 PRGSoftware, LLC. All rights reserved.
  */
 
-/*global $ document google navigator AcequiaClient MapIconMaker setTimeout */
+/*global $ document google navigator AcequiaClient MapIconMaker setTimeout localStorage */
 
 var objCallback = function (obj, func) {
     return function () {
-        // console.log(func);
         obj[func].apply(obj, arguments);
     };
 };
@@ -20,6 +19,8 @@ var objCallback = function (obj, func) {
  */
 var AutobusClient = function () {
     this.map = null;
+    
+    this.agency = null;
     
     this.routes = {};
     
@@ -53,8 +54,9 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
 
     // Set up the acequia client and connect to the server
     this.acequiaClient = new AcequiaClient("autobus_" + Math.random(), "3001");
-    this.acequiaClient.on("routes", objCallback(this, "onRoutes"));
-    this.acequiaClient.on("route", objCallback(this, "onRouteFromServer"));
+    this.acequiaClient.on("version", objCallback(this, "onVersion"));
+    this.acequiaClient.on("routes", objCallback(this, "onRoutesMessage"));
+    this.acequiaClient.on("route", objCallback(this, "onRouteMessage"));
     this.acequiaClient.on("busPosition", objCallback(this, "onBusPosition"));
     this.acequiaClient.addConnectionChangeHandler(objCallback(this, "onConnected"));
     this.acequiaClient.connect();
@@ -73,8 +75,32 @@ AutobusClient.prototype.getCurrentPosition = function () {
 
 AutobusClient.prototype.onConnected = function (connected) {
     if (connected) {
-        this.acequiaClient.send("getRoutes");
+        this.acequiaClient.send("getVersion");
     }
+};
+
+AutobusClient.prototype.onVersion = function (message) {
+    var version = message.body[0].version, ls, routes,
+        agency  = message.body[0].agency;
+
+    if (localStorage.getItem(agency.agency_id + "version") === version) {
+        this.agency = JSON.parse(localStorage.getItem(agency.agency_id + "agency"));
+        routes = JSON.parse(localStorage.getItem(agency.agency_id + "routes"));
+        this.onRoutes(routes);
+    } else {
+        localStorage.clear();
+        this.agency = agency;
+        localStorage.setItem(agency.agency_id + "version", version);
+        localStorage.setItem(agency.agency_id + "agency", JSON.stringify(agency));
+        this.acequiaClient.send("getRoutes");    
+    }
+    
+    this.setAgencyInfo();
+};
+
+AutobusClient.prototype.setAgencyInfo = function () {
+    document.title = this.agency.agency_name;
+    $("#home-title").html(this.agency.agency_name);
 };
 
 AutobusClient.prototype.onBusPosition = function (message) {
@@ -112,6 +138,11 @@ AutobusClient.prototype.onPositionUpdate = function (position) {
     setTimeout(objCallback(this, "getCurrentPosition"), 2000);
 };
 
+AutobusClient.prototype.onRoutesMessage = function (message) {
+    localStorage.setItem(this.agency.agency_id + "routes", JSON.stringify(message.body));
+    this.onRoutes(message.body);
+};
+
 AutobusClient.prototype.onRoutes = function (message) {
     throw new Error("onRoutes NOT IMPLEMENTED");
 };
@@ -120,7 +151,7 @@ AutobusClient.prototype.onRoute = function (route) {
     throw new Error("onRoute NOT IMPLEMENTED");
 };
 
-AutobusClient.prototype.onRouteFromServer = function (message) {
+AutobusClient.prototype.onRouteMessage = function (message) {
     var trip, route = message.body[0];
     this.routes[route.route_id] = route;
     
@@ -224,11 +255,11 @@ AutobusClient.prototype.setMapForMarkers = function (route_id, map) {
 };
 
 AutobusClient.prototype.setMapForPath = function (route_id, map) {
-    this.routePaths[route_id].setMap(map);
+    this.setMapForPathOnly(route_id, map);
     this.setMapForMarkers(route_id, map);
 };
 
-AutobusClient.prototype.setMapForOnlyPath = function (route_id, map, andMarkers) {
+AutobusClient.prototype.setMapForPathOnly = function (route_id, map) {
     this.routePaths[route_id].setMap(map);
 };
 
@@ -245,8 +276,8 @@ AutobusClient.prototype.showAllPaths = function () {
 
     for (route_id in this.routes) {
         this.setMapForMarkers(route_id, null);
-        this.setMapForOnlyPath(route_id, this.map);
+        this.setMapForPathOnly(route_id, this.map);
     }
     this.map.setZoom(this.map.getZoom() + 1);
-}
+};
 

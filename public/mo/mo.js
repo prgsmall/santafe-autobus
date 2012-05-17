@@ -14,15 +14,68 @@ var enableButtons = function () {
 
 var app = new AutobusClient();
 
-app.onRoutes = function (message) {
-    var i, rt, routes = message.body;
+app.onRoutes = function (routes) {
+    var i;
     
     for (i = 0; i < routes.length; i += 1) {
-        rt = routes[i];
-        this.routes[rt.route_id] = rt;
+        this.addRoute(routes[i]);
+        this.acequiaClient.send("getRoute", {route_id: routes[i].route_id});
+    }    
+};
 
-        this.acequiaClient.send("getRoute", {route_id: rt.route_id});
-    }
+app.addRoute = function (rt) {
+    var eleId = "route-li-" + rt.route_id;
+    
+    this.routes[rt.route_id] = rt;
+        
+    $("<li></li>")
+        .attr("id", eleId)
+        .attr("data-theme", "b")
+        .appendTo("#route-listview");
+
+    $("<a></a>")
+        .attr("href", "#route_" + rt.route_id)
+        .attr("data-transition", "slide")
+        .html(rt.route_id + ": " + rt.route_desc)
+        .appendTo("#" + eleId);
+        
+    this.addRoutePage(rt);
+};
+
+app.addRoutePage = function (rt) {
+
+    var pageId = "route_" + rt.route_id;
+    $("<div></div")
+        .attr("data-role", "page")
+        .attr("data-theme", "b")
+        .attr("id", pageId)
+        .appendTo("body");
+        
+    $("<div></div>")
+        .attr("data-theme", "b")
+        .attr("data-role", "header")
+        .attr("id", "header-" + pageId)
+        .appendTo("#" + pageId);
+        
+    $("<h3></h3>")
+        .html(rt.route_long_name + ": " + rt.route_desc)
+        .appendTo("#header-" + pageId);
+        
+    $("<a></a>")
+        .attr("data-role", "button")
+        .attr("data-transition", "slide")
+        .attr("data-direction", "reverse")
+        .attr("href", "#bus_routes_page")
+        .attr("data-icon", "arrow-l")
+        .attr("data-iconpos", "left")
+        .html("Back")
+        .appendTo("#header-" + pageId);
+    
+    $("<div></div>")
+        .attr("data-role", "content")
+        .appendTo("#" + pageId);
+        
+    $("#app-footer").clone().appendTo("#" + pageId);    
 };
 
 app.infowindow = new InfoBubble({
@@ -152,18 +205,17 @@ app.setSelectedBusDateTime = function (txt) {
 };
 
 app.displaySinglePath = function (route_id) {
-    var i, latlngbounds;
-    for (i in this.routes) {
-        if (i === route_id) {
-            this.setMapForMarkers(i, this.map);
-            this.setMapForPath(i, this.map);
+    var id, latlngbounds = new google.maps.LatLngBounds();
+    
+    for (id in this.routes) {
+        if (id === route_id) {
+            this.setMapForMarkers(id, this.map);
+            this.setMapForPath(id, this.map);
         } else {
-            this.setMapForMarkers(i, null);
-            this.setMapForPath(i, null);
+            this.setMapForMarkers(id, null);
+            this.setMapForPath(id, null);
         }
     }
-
-    latlngbounds = new google.maps.LatLngBounds();
 
     this.routePaths[route_id].getPath().forEach(function (n) {
         latlngbounds.extend(n);
@@ -303,10 +355,6 @@ $(document).ready(function (evt) {
 $(document).bind("pagechange", function (evt, data) {
    
     switch (data.toPage[0].id) {
-    case "bus_schedule_page":
-        $("#bus_schedule_route").html(data.options.fromPage[0].id);
-        break;
-
     case "home":
         setMapParent(data.toPage[0].id);
         try {
