@@ -34,18 +34,6 @@ var onRefresh = function (message) {
 };
 
 var startHTTPServer = function () {
-    acequiaServer = require("acequia").createServer({
-        wsPort: 3001,
-        oscPort: false,
-        tcpPort: false,
-        datastore: false
-    });
-    acequiaServer.on("refresh", onRefresh);    
-    acequiaServer.on("getRoutes", onGetRoutes);
-    acequiaServer.on("getRoute", onGetRoute);
-    acequiaServer.on("getVersion", onGetVersion);    
-    acequiaServer.start();
-    
     app = express.createServer();
     
     // Configuration
@@ -59,9 +47,20 @@ var startHTTPServer = function () {
     app.get('/', function (req, res) {
         res.render('/index.html');
     });
-
     app.listen(3000);
-    console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);    
+
+    acequiaServer = require("acequia").createServer({
+        express_app: app
+        , oscPort: false
+        , tcpPort: false
+        , datastore: false 
+        , minify_client: false
+    });
+    acequiaServer.on("refresh", onRefresh);    
+    acequiaServer.on("getRoutes", onGetRoutes);
+    acequiaServer.on("getRoute", onGetRoute);
+    acequiaServer.on("getVersion", onGetVersion);    
+    acequiaServer.start();
 };
 
 var START = function () {
@@ -69,7 +68,7 @@ var START = function () {
 };
 
 var start = function () {
-    setTimeout(START, 200);
+    setTimeout(START, 2);
 };
 
 start();

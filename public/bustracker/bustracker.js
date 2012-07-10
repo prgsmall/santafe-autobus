@@ -13,7 +13,7 @@ var app = {
     init: function () {
         if (!this.initialized) {
             this.initialized = true;
-            this.acequiaClient = new AcequiaClient("bus_tracker_" + Math.random(), "3001");
+            this.acequiaClient = new AcequiaClient("bus_tracker_" + Math.random());
             this.acequiaClient.connect();
             this.routeId = "";
             this.tracking = false;

@@ -53,7 +53,7 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
     this.map = new google.maps.Map(document.getElementById("map_canvas"), options);
 
     // Set up the acequia client and connect to the server
-    this.acequiaClient = new AcequiaClient("autobus_" + Math.random(), "3001");
+    this.acequiaClient = new AcequiaClient("autobus_" + Math.random());
     this.acequiaClient.on("version", objCallback(this, "onVersion"));
     this.acequiaClient.on("routes", objCallback(this, "onRoutesMessage"));
     this.acequiaClient.on("route", objCallback(this, "onRouteMessage"));
@@ -190,11 +190,11 @@ AutobusClient.prototype.dateFromTimeString = function (timeString) {
     return ret;
 };
 
-AutobusClient.prototype.getTripForRoute = function (route_id, directionId) {
+AutobusClient.prototype.getTripForRoute = function (route_id, direction_id) {
     var i, route, service_id;
     
-    if (typeof(directionId) === "undefined") {
-        directionId = "0";
+    if (typeof(direction_id) === "undefined") {
+        direction_id = "0";
     }
     route = this.routes[route_id];
     
@@ -202,11 +202,13 @@ AutobusClient.prototype.getTripForRoute = function (route_id, directionId) {
     
     for (i = 0; i < route.trips.length; i += 1) {
         if (route.trips[i].service_id === service_id &&
-            route.trips[i].direction_id === directionId) {
+            route.trips[i].direction_id === direction_id) {
             return route.trips[i];
         }
     }
     
+    console.warn("No trip found for route: " + route_id + 
+                 ", service_id: " + service_id + ", direction_id: " + direction_id);
     return null;
 };
 
