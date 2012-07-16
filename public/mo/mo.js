@@ -89,9 +89,14 @@ app.infowindow = new InfoBubble({
     backgroundColor: "#fff"
 });
 
-app.onRoute = function (route) {
-    var i, routePath, stop, point, marker,
-    routeCoordinates = [], color,
+app.onRoute = function (trip) {
+    var i, routePath, stop, point, marker, onclick, routeCoordinates = [], color;
+    
+    this.checkRoutes();
+    
+    if (trip == null) {
+        return;
+    }
     
     onclick = function (i, m) {
         return function () {
@@ -105,25 +110,25 @@ app.onRoute = function (route) {
         };
     };
     
-    color = "#" + this.routes[route.route_id].route_color;
+    color = "#" + this.routes[trip.route_id].route_color;
     
-    this.markers[route.route_id] = [];
+    this.markers[trip.route_id] = [];
     
-    for (i = 0; i < route.stop_times.length; i += 1) {
-        stop = route.stop_times[i].stop;
+    for (i = 0; i < trip.stop_times.length; i += 1) {
+        stop = trip.stop_times[i].stop;
         point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
         routeCoordinates.push(point);
         
         marker = new google.maps.Marker({
             position: point,
             map: null,
-            title: route.route_id + ": " + stop.stop_name,
+            title: trip.route_id + ": " + stop.stop_name,
             icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
             stop_id: stop.stop_id,
-            route_id: route.route_id
+            route_id: trip.route_id
         });
         
-        this.markers[route.route_id].push(marker);
+        this.markers[trip.route_id].push(marker);
         
         google.maps.event.addListener(marker, 'click', onclick(this.infowindow, marker));
     }
@@ -136,11 +141,9 @@ app.onRoute = function (route) {
         map: this.map
     });
 
-    $("#route_" + route.route_id).css("opacity", "1.0");
+    $("#route_" + trip.route_id).css("opacity", "1.0");
     
-    this.routePaths[route.route_id] = routePath;
-    
-    this.checkRoutes();
+    this.routePaths[trip.route_id] = routePath;
 };
 
 app.checkRoutes = function () {
@@ -153,47 +156,38 @@ app.checkRoutes = function () {
     enableButtons();
 };
 
-app.displayNextBuses = function (route_id, stop_id) {
-    var times, j, onclick, rt = this.routes[route_id], count;
-    
-    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
-    
-    $("#next-bus-listview-title~li").remove();
-    
-    times = this.getNextArrivalsForStop(route_id, stop_id);
+app.addNextBusTimes = function (ele_id, times, headsign) {
+    var j, count;
+    ele_id = "#" + ele_id;
     
     count = Math.min(7, times.length);
+    
+    $(ele_id + "-title").html(headsign);
     
     for (j = 0; j < count; j += 1) {
         onclick = "onclick='app.setSelectedBusDateTime(\"" + times[j].time + "\");'";
         $('<li data-theme="c"><a href="#count-down" data-transition="slide"' + onclick + '>' +
-           times[j].time + '</a></li>').appendTo("#next-bus-listview");        
+           times[j].time + '</a></li>').appendTo(ele_id);        
     }
     
     try {
-        $("#next-bus-listview").listview('refresh');
+        $(ele_id).listview('refresh');
     } catch (e) {
         // Eat the exception
     }
+}
 
-    /*
-    $("#bus-time-buttons>legend~input").remove();
-    $("#bus-time-buttons>legend~label").remove();
-
-    for (j = 0; j < count; j += 1) {
-        $("<input/>")
-            .attr("name", "bus-time-radiobutton")
-            .attr("id", "stop_" + j)
-            .attr("value", times[j].time)
-            .attr("type", "radio")
-            .appendTo("#bus-time-buttons");
-
-        $("<label/>")
-            .attr("for", "stop_" + j)
-            .html(times[j].time)
-            .appendTo("#bus-time-buttons");
-    }
-    */
+app.displayNextBuses = function (route_id, stop_id) {
+    var arrivals, j, onclick, rt = this.routes[route_id], count;
+    
+    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
+    
+    $("#next-bus-listview-title-inbound~li").remove();
+    
+    arrivals = this.getNextArrivalsForStop(route_id, stop_id);
+    
+    this.addNextBusTimes("next-bus-listview-inbound", arrivals.times[0], arrivals.headsigns[0]);
+    this.addNextBusTimes("next-bus-listview-outbound", arrivals.times[1], arrivals.headsigns[1]);    
 };
 
 app.setSelectedBusDateTime = function (txt) {

@@ -156,7 +156,9 @@ AutobusClient.prototype.onRouteMessage = function (message) {
     this.routes[route.route_id] = route;
     
     trip = this.getTripForRoute(route.route_id);
-    this.onRoute(trip);
+    if (trip != null) {
+        this.onRoute(trip);
+    }
 };
 
 AutobusClient.prototype.routeIdFromEleId = function (eleId) {
@@ -191,14 +193,13 @@ AutobusClient.prototype.dateFromTimeString = function (timeString) {
 };
 
 AutobusClient.prototype.getTripForRoute = function (route_id, direction_id) {
-    var i, route, service_id;
+    var i, 
+    route = this.routes[route_id], 
+    service_id = this.getServiceId();
     
     if (typeof(direction_id) === "undefined") {
         direction_id = "0";
     }
-    route = this.routes[route_id];
-    
-    service_id = this.getServiceId();
     
     for (i = 0; i < route.trips.length; i += 1) {
         if (route.trips[i].service_id === service_id &&
@@ -220,39 +221,53 @@ AutobusClient.prototype.getTripsForRoute = function (route_id) {
 };
 
 AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, time) {
-    var i, j, trips = [], stop_time, ret = [], arrival_time, service_id;
+    var i, j, k, trips = [], stop_time, times = [], headsigns = [], arrival_time, service_id, direction_id, direction_ids = ["0", "1"];
 
     if (typeof(time) === "undefined") {
         time = new Date();
     }
-    
-    service_id = this.getServiceId(time);
 
     trips = this.routes[route_id].trips;
+    service_id = this.getServiceId(time);
 
-    for (i = 0; i < trips.length; i += 1) {
-        if (service_id !== trips[i].service_id) {
-            continue;
-        }
-        for (j = 0; j < trips[i].stop_times.length; j += 1) {
-            stop_time = trips[i].stop_times[j];
-            if (stop_time.stop_id === stop_id) {
-                arrival_time = this.dateFromTimeString(stop_time.arrival_time);
-                if (arrival_time > time) {
-                    ret.push({time: stop_time.arrival_time,
-                              direction: trips[i].direction_id});
+    headsigns.push("");
+    headsigns.push("");
+    
+    for (k = 0; k < direction_ids.length; k += 1) {
+        direction_id = direction_ids[k];
+        times.push([]);
+        
+        for (i = 0; i < trips.length; i += 1) {
+            if (service_id !== trips[i].service_id) {
+                continue;
+            }
+            if (direction_id !== trips[i].direction_id) {
+                continue;
+            }
+            headsigns[k] = trips[i].trip_headsign;
+            for (j = 0; j < trips[i].stop_times.length; j += 1) {
+                stop_time = trips[i].stop_times[j];
+                if (stop_time.stop_id === stop_id) {
+                    arrival_time = this.dateFromTimeString(stop_time.arrival_time);
+                    if (arrival_time > time) {
+                        times[k].push({time: stop_time.arrival_time,
+                                  direction: trips[i].direction_id});
+                    }
                 }
             }
         }
     }
-
-    return ret;
+    
+    return {times:      times,
+            headsigns:  headsigns};
 };
 
 AutobusClient.prototype.setMapForMarkers = function (route_id, map) {
     var i;
-    for (i = 0; i < this.markers[route_id].length; i += 1) {
-        this.markers[route_id][i].setMap(map);
+    if (typeof(this.markers[route_id]) != "undefined") {
+        for (i = 0; i < this.markers[route_id].length; i += 1) {
+            this.markers[route_id][i].setMap(map);
+        }
     }
 };
 
@@ -262,7 +277,9 @@ AutobusClient.prototype.setMapForPath = function (route_id, map) {
 };
 
 AutobusClient.prototype.setMapForPathOnly = function (route_id, map) {
-    this.routePaths[route_id].setMap(map);
+    if (typeof(this.routePaths[route_id]) != "undefined") {
+        this.routePaths[route_id].setMap(map);
+    }
 };
 
 AutobusClient.prototype.showAllPaths = function () {
