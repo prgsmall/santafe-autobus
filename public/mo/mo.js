@@ -90,49 +90,56 @@ app.infowindow = new InfoBubble({
 });
 
 app.onRoute = function (trip) {
-    var i, routePath, stop, point, marker, onclick, routeCoordinates = [], color;
+    var routePath, point, marker, routeCoordinates = [], color, stops, addMarkersForRoute, onclick;
     
     this.checkRoutes();
     
-    if (trip == null) {
+    if (trip === null) {
         return;
     }
     
     onclick = function (i, m) {
         return function () {
-            var content, onclick = "\"app.displayNextBuses('" + m.route_id + "','" + m.stop_id + "');\"";
+            var content, onclick_handler = "\"app.displayNextBuses('" + m.route_id + "','" + m.stop_id + "');\"";
             content = "<div class='info'>";
             content += "<div class='info-title'>" + m.title + "</div>";
-            content += "<a href='#next_buses' onclick=" + onclick + ">Next Buses</a>";
+            content += "<a href='#next_buses' onclick=" + onclick_handler + ">Next Buses</a>";
             content += "</div>";
             i.setContent(content);
             i.open(this.map, m);
         };
     };
     
+    stops = this.getAllStopsForRoute(trip.route_id);
+    
+    addMarkersForRoute = function (inOrOut, self) {
+        var i, stop;
+        for (i = 0; i < inOrOut.length; i += 1) {
+            stop = inOrOut[i];
+            point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
+            routeCoordinates.push(point);
+
+            marker = new google.maps.Marker({
+                position: point,
+                map: null,
+                title: trip.route_id + ": " + stop.stop_name,
+                icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
+                stop_id: stop.stop_id,
+                route_id: trip.route_id
+            });
+
+            self.markers[trip.route_id].push(marker);
+
+            google.maps.event.addListener(marker, 'click', onclick(self.infowindow, marker));
+        }
+    };
+    
     color = "#" + this.routes[trip.route_id].route_color;
     
     this.markers[trip.route_id] = [];
-    
-    for (i = 0; i < trip.stop_times.length; i += 1) {
-        stop = trip.stop_times[i].stop;
-        point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
-        routeCoordinates.push(point);
-        
-        marker = new google.maps.Marker({
-            position: point,
-            map: null,
-            title: trip.route_id + ": " + stop.stop_name,
-            icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
-            stop_id: stop.stop_id,
-            route_id: trip.route_id
-        });
-        
-        this.markers[trip.route_id].push(marker);
-        
-        google.maps.event.addListener(marker, 'click', onclick(this.infowindow, marker));
-    }
-        
+    addMarkersForRoute(stops.outbound, this);
+    addMarkersForRoute(stops.inbound, this);
+
     routePath = new google.maps.Polyline({
         path: routeCoordinates,
         strokeColor: color,
@@ -157,10 +164,16 @@ app.checkRoutes = function () {
 };
 
 app.addNextBusTimes = function (ele_id, times, headsign) {
-    var j, count;
+    var j, count, onclick;
     ele_id = "#" + ele_id;
     
     count = Math.min(7, times.length);
+    
+    if (count === 0) {
+        $(ele_id).hide();
+    } else {
+        $(ele_id).show();        
+    }
     
     $(ele_id + "-title").html(headsign);
     
@@ -175,14 +188,17 @@ app.addNextBusTimes = function (ele_id, times, headsign) {
     } catch (e) {
         // Eat the exception
     }
-}
+};
 
 app.displayNextBuses = function (route_id, stop_id) {
-    var arrivals, j, onclick, rt = this.routes[route_id], count;
+    var arrivals, j, onclick, rt = this.routes[route_id], count, stop;
     
-    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc);
+    stop = this.stopForStopId(route_id, stop_id);
     
-    $("#next-bus-listview-title-inbound~li").remove();
+    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc + "<br/>Stop: " + stop.stop_name);
+    
+    $("#next-bus-listview-inbound-title~li").remove();
+    $("#next-bus-listview-outbound-title~li").remove();
     
     arrivals = this.getNextArrivalsForStop(route_id, stop_id);
     

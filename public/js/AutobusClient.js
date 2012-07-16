@@ -5,7 +5,7 @@
  *  Copyright (c) 2012 PRGSoftware, LLC. All rights reserved.
  */
 
-/*global $ document google navigator AcequiaClient MapIconMaker setTimeout localStorage */
+/*global $ document google navigator AcequiaClient MapIconMaker setTimeout localStorage console*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -156,7 +156,7 @@ AutobusClient.prototype.onRouteMessage = function (message) {
     this.routes[route.route_id] = route;
     
     trip = this.getTripForRoute(route.route_id);
-    if (trip != null) {
+    if (trip !== null) {
         this.onRoute(trip);
     }
 };
@@ -182,14 +182,70 @@ AutobusClient.prototype.getServiceId = function (time) {
 
 AutobusClient.prototype.dateFromTimeString = function (timeString) {
     var ret,
-    dd = timeString.split(":");
+    dd = timeString.split(":"),
+    hours = parseInt(dd[0], 10);
 
     ret = new Date();
-    ret.setHours(parseInt(dd[0], 10));
+    if (hours > 24) {
+        hours = 24 - hours;
+        ret.setDate(ret.getDate() + 1);
+    }
+    ret.setHours(hours);
     ret.setMinutes(parseInt(dd[1], 10));
     ret.setSeconds(parseInt(dd[2], 10));
 
     return ret;
+};
+
+AutobusClient.prototype.stopForStopId = function (route_id, stop_id) {
+    var i, j, trips;
+    
+    trips = this.routes[route_id].trips;
+    
+    for (i = 0; i < trips.length; i += 1) {
+        for (j = 0; j < trips[i].stop_times.length; j += 1) {
+            if (trips[i].stop_times[j].stop_id === stop_id) {
+                return trips[i].stop_times[j].stop;
+            }
+        }
+    }
+
+    return null;
+};
+
+AutobusClient.prototype.getAllStopsForRoute = function (route_id) {
+    // Retrieve all of the stops for a route
+    var inbound = [], outbound = [], service_id, trips, i, j, addToList;
+    
+    addToList = function (list, stop) {
+        for (var i = 0; i < list.length; i += 1) {
+            if (list[i].stop_id === stop.stop_id) {
+                return;
+            }
+        }
+        list.push(stop);
+    };
+    service_id = this.getServiceId();
+    
+    trips = this.routes[route_id].trips;
+    
+    for (i = 0; i < trips.length; i += 1) {
+        if (service_id !== trips[i].service_id) {
+            continue;
+        }
+        for (j = 0; j < trips[i].stop_times.length; j += 1) {
+            if (trips[i].direction_id === "0") {
+                addToList(outbound, trips[i].stop_times[j].stop);
+            } else {
+                addToList(inbound, trips[i].stop_times[j].stop);
+            }
+        }
+    }
+    
+    return {
+        outbound: outbound, 
+        inbound: inbound
+    };
 };
 
 AutobusClient.prototype.getTripForRoute = function (route_id, direction_id) {
@@ -230,12 +286,10 @@ AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, ti
     trips = this.routes[route_id].trips;
     service_id = this.getServiceId(time);
 
-    headsigns.push("");
-    headsigns.push("");
-    
     for (k = 0; k < direction_ids.length; k += 1) {
         direction_id = direction_ids[k];
         times.push([]);
+        headsigns.push("");
         
         for (i = 0; i < trips.length; i += 1) {
             if (service_id !== trips[i].service_id) {
@@ -248,6 +302,7 @@ AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, ti
             for (j = 0; j < trips[i].stop_times.length; j += 1) {
                 stop_time = trips[i].stop_times[j];
                 if (stop_time.stop_id === stop_id) {
+                    console.log(stop_time.arrival_time);
                     arrival_time = this.dateFromTimeString(stop_time.arrival_time);
                     if (arrival_time > time) {
                         times[k].push({time: stop_time.arrival_time,
@@ -264,7 +319,7 @@ AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, ti
 
 AutobusClient.prototype.setMapForMarkers = function (route_id, map) {
     var i;
-    if (typeof(this.markers[route_id]) != "undefined") {
+    if (typeof(this.markers[route_id]) !== "undefined") {
         for (i = 0; i < this.markers[route_id].length; i += 1) {
             this.markers[route_id][i].setMap(map);
         }
@@ -277,7 +332,7 @@ AutobusClient.prototype.setMapForPath = function (route_id, map) {
 };
 
 AutobusClient.prototype.setMapForPathOnly = function (route_id, map) {
-    if (typeof(this.routePaths[route_id]) != "undefined") {
+    if (typeof(this.routePaths[route_id]) !== "undefined") {
         this.routePaths[route_id].setMap(map);
     }
 };
