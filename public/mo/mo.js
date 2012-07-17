@@ -4,10 +4,12 @@
 
 var disableButtons = function () {
     $("div[data-role=footer]>a").addClass('ui-disabled');
+    $("#imgAjaxLoader").show();
 };
 
 var enableButtons = function () {
     $("div[data-role=footer]>a").removeClass('ui-disabled');
+    $("#imgAjaxLoader").hide();
 };
 
 
@@ -29,7 +31,9 @@ app.onRoutes = function (routes) {
 
 app.getNextRoute = function () {
     this.nextIndex += 1;
-    this.acequiaClient.send("getRoute", {route_id: this.route_ids[this.nextIndex]});
+    if (this.nextIndex < this.route_ids.length) {
+        this.acequiaClient.send("getRoute", {route_id: this.route_ids[this.nextIndex]});
+    }   
 };
 
 app.addRoute = function (rt) {
