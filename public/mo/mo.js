@@ -17,16 +17,26 @@ var app = new AutobusClient();
 app.onRoutes = function (routes) {
     var i;
     
+    this.nextIndex = -1;
+    this.route_ids = [];
+    
     for (i = 0; i < routes.length; i += 1) {
         this.addRoute(routes[i]);
-        this.acequiaClient.send("getRoute", {route_id: routes[i].route_id});
-    }    
+    }
+    
+    this.getNextRoute();
 };
+
+app.getNextRoute = function () {
+    this.nextIndex += 1;
+    this.acequiaClient.send("getRoute", {route_id: this.route_ids[this. ]});
+}
 
 app.addRoute = function (rt) {
     var eleId = "route-li-" + rt.route_id;
     
     this.routes[rt.route_id] = rt;
+    this.route_ids.push(rt.route_id);
         
     $("<li></li>")
         .attr("id", eleId)
@@ -93,6 +103,8 @@ app.onRoute = function (trip) {
     var routePath, point, marker, routeCoordinates = [], color, stops, addMarkersForRoute, onclick;
     
     this.checkRoutes();
+    
+    this.getNextRoute();
     
     if (trip === null) {
         return;
