@@ -17,23 +17,23 @@ autobus.onRoutes = function (routes) {
     
     for (i = 0; i < routes.length; i += 1) {
         rt = routes[i];
-        this.routes[rt.route_id] = rt;
+        this.routes[rt.id] = rt;
 
         $("<div></div>")
-            .attr("id", "route_" + rt.route_id)
-            .css("background", "#" + rt.route_color)
-            .html(rt.route_id + ": " + rt.route_desc)
+            .attr("id", "route_" + rt.id)
+            .css("background", "#" + rt.color)
+            .html(rt.id + ": " + rt.desc)
             .click(objCallback(this, "onclickRoute"))
             .addClass("autobus_list_item ui-corner-all")
             .css("opacity", "0.5")
             .appendTo("#autobus_route_list");
 
         $('<button></button>')
-            .attr("id", "simulate_" + rt.route_id)
+            .attr("id", "simulate_" + rt.id)
             .click(objCallback(this, "onClickStartSimulation"))
             .css("margin-left", "100px")
             .html("sim")
-            .appendTo("#route_" + rt.route_id);
+            .appendTo("#route_" + rt.id);
     }
 };
 
@@ -91,7 +91,7 @@ autobus.startBusSimulation = function (trip) {
     // First create an array of the trip points
     points = [];
     for (j = 0; j < trip.stop_times.length; j += 1) {
-        points.push(new google.maps.LatLng(parseFloat(trip.stop_times[j].stop.stop_lat), parseFloat(trip.stop_times[j].stop.stop_lon)));
+        points.push(new google.maps.LatLng(parseFloat(trip.stop_times[j].stop.lat), parseFloat(trip.stop_times[j].stop.lon)));
     }
     
     // Interpolate between the points
@@ -154,9 +154,9 @@ autobus.onRoute = function (route) {
         };
     };
     
-    color = "#" + this.routes[route.route_id].route_color;
+    color = "#" + this.routes[route.id].color;
     
-    this.markers[route.route_id] = [];
+    this.markers[route.id] = [];
     
     infowindow = new google.maps.InfoWindow({
         content: "blah"
@@ -164,19 +164,19 @@ autobus.onRoute = function (route) {
 
     for (i = 0; i < route.stop_times.length; i += 1) {
         stop = route.stop_times[i].stop;
-        point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
+        point = new google.maps.LatLng(parseFloat(stop.lat), parseFloat(stop.lon));
         routeCoordinates.push(point);
         
         marker = new google.maps.Marker({
             position: point,
             map: this.map,
-            title: stop.stop_name,
+            title: stop.name,
             icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
-            stop_id: stop.stop_id,
-            route_id: route.route_id
+            stop_id: stop.id,
+            route_id: route.id
         });
         
-        this.markers[route.route_id].push(marker);
+        this.markers[route.id].push(marker);
         
         google.maps.event.addListener(marker, 'click', onclick(infowindow, marker));
     }
@@ -189,8 +189,8 @@ autobus.onRoute = function (route) {
     });
       
     routePath.setMap(this.map);
-    $("#route_" + route.route_id).css("opacity", "1.0");
+    $("#route_" + route.id).css("opacity", "1.0");
     
-    this.routePaths[route.route_id] = routePath;
+    this.routePaths[route.id] = routePath;
 };
 

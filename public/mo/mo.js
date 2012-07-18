@@ -8,6 +8,7 @@ var disableButtons = function () {
 };
 
 var enableButtons = function () {
+    this.allDataDownloaded = true;
     $("div[data-role=footer]>a").removeClass('ui-disabled');
     $("#imgAjaxLoader").hide();
 };
@@ -37,10 +38,10 @@ app.getNextRoute = function () {
 };
 
 app.addRoute = function (rt) {
-    var eleId = "route-li-" + rt.route_id;
+    var eleId = "route-li-" + rt.id;
     
-    this.routes[rt.route_id] = rt;
-    this.route_ids.push(rt.route_id);
+    this.routes[rt.id] = rt;
+    this.route_ids.push(rt.id);
         
     $("<li></li>")
         .attr("id", eleId)
@@ -48,9 +49,9 @@ app.addRoute = function (rt) {
         .appendTo("#route-listview");
 
     $("<a></a>")
-        .attr("href", "#route_" + rt.route_id)
+        .attr("href", "#route_" + rt.id)
         .attr("data-transition", "slide")
-        .html(rt.route_id + ": " + rt.route_desc)
+        .html(rt.id + ": " + rt.desc)
         .appendTo("#" + eleId);
         
     this.addRoutePage(rt);
@@ -58,7 +59,7 @@ app.addRoute = function (rt) {
 
 app.addRoutePage = function (rt) {
 
-    var pageId = "route_" + rt.route_id;
+    var pageId = "route_" + rt.id;
     $("<div></div")
         .attr("data-role", "page")
         .attr("data-theme", "b")
@@ -72,7 +73,7 @@ app.addRoutePage = function (rt) {
         .appendTo("#" + pageId);
         
     $("<h3></h3>")
-        .html(rt.route_long_name + ": " + rt.route_desc)
+        .html(rt.long_name + ": " + rt.desc)
         .appendTo("#header-" + pageId);
         
     $("<a></a>")
@@ -132,15 +133,15 @@ app.onRoute = function (trip) {
         var i, stop;
         for (i = 0; i < inOrOut.length; i += 1) {
             stop = inOrOut[i];
-            point = new google.maps.LatLng(parseFloat(stop.stop_lat), parseFloat(stop.stop_lon));
+            point = new google.maps.LatLng(parseFloat(stop.lat), parseFloat(stop.lon));
             routeCoordinates.push(point);
 
             marker = new google.maps.Marker({
                 position: point,
                 map: null,
-                title: trip.route_id + ": " + stop.stop_name,
+                title: trip.route_id + ": " + stop.name,
                 icon: MapIconMaker.createMarkerIcon({width: 20, height: 34, primaryColor: color}),
-                stop_id: stop.stop_id,
+                stop_id: stop.id,
                 route_id: trip.route_id
             });
 
@@ -150,12 +151,13 @@ app.onRoute = function (trip) {
         }
     };
     
-    color = "#" + this.routes[trip.route_id].route_color;
+    color = "#" + this.routes[trip.route_id].color;
     
     this.markers[trip.route_id] = [];
     addMarkersForRoute(stops.outbound, this);
     addMarkersForRoute(stops.inbound, this);
 
+    // TODO:  add two paths for inbound and outbound
     routePath = new google.maps.Polyline({
         path: routeCoordinates,
         strokeColor: color,
@@ -211,7 +213,7 @@ app.displayNextBuses = function (route_id, stop_id) {
     
     stop = this.stopForStopId(route_id, stop_id);
     
-    $("#next_bus_title").html("Next Buses for " + rt.route_id + ": " + rt.route_desc + "<br/>Stop: " + stop.stop_name);
+    $("#next_bus_title").html("Next Buses for " + rt.id + ": " + rt.desc + "<br/>Stop: " + stop.name);
     
     $("#next-bus-listview-inbound-title~li").remove();
     $("#next-bus-listview-outbound-title~li").remove();

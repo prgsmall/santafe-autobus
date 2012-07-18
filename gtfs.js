@@ -71,7 +71,7 @@ GTFSReader.prototype.getGTFSFiles = function (file_url, self) {
 };
 
 GTFSReader.prototype.unzipFeedFiles = function (file_name) {
-    var uncompressed, zipfile, dirname, zf, fd, i;
+    var uncompressed, zipfile, dirname, zf, fd, i, name, buffer;
     zipfile = require('zipfile');
     zf = new zipfile.ZipFile(file_name);
     console.log(zf);
@@ -80,7 +80,7 @@ GTFSReader.prototype.unzipFeedFiles = function (file_name) {
         uncompressed = path.join(this.gtfsobj.dataDir, name);
         
         if (path.extname(name)) {
-            var buffer = zf.readFileSync(name);
+            buffer = zf.readFileSync(name);
             fd = fs.openSync(uncompressed, 'w');
             console.log('unzipping: ' + name);
             fs.writeSync(fd, buffer, 0, buffer.length, null);
@@ -143,7 +143,7 @@ GeneralTransitFeed.prototype.getTrips = function () {
 GeneralTransitFeed.prototype.getRouteById = function (id) {
     var ret = null, route = null, i;
     for (i = 0; i < this.dataset.routes.length; i += 1) {        
-        if (this.dataset.routes[i].route_id === id) { 
+        if (this.dataset.routes[i].id === id) { 
             route = this.dataset.routes[i];
             break;
         }   
@@ -152,7 +152,7 @@ GeneralTransitFeed.prototype.getRouteById = function (id) {
     if (route) {
         ret = {};
         utils.clone(route, ret);
-        ret.trips = this.getTripsForRoute(ret.route_id);
+        ret.trips = this.getTripsForRoute(ret.id);
     }
     return ret;
 };
@@ -160,7 +160,7 @@ GeneralTransitFeed.prototype.getRouteById = function (id) {
 GeneralTransitFeed.prototype.getTripById = function (id) {
     var ret = null, trip = null, i;
     for (i = 0; i < this.dataset.trips.length; i += 1) {      
-        if (this.dataset.trips[i].trip_id === id) {
+        if (this.dataset.trips[i].id === id) {
             trip = this.dataset.trips[i];
             break;
         }
@@ -169,7 +169,7 @@ GeneralTransitFeed.prototype.getTripById = function (id) {
     if (trip) {
         ret = {};
         utils.clone(trip, ret);
-        ret.stop_times = this.getStopTimesForTrip(ret.trip_id);
+        ret.stop_times = this.getStopTimesForTrip(ret.id);
     }
     return ret;
 };
@@ -178,7 +178,7 @@ GeneralTransitFeed.prototype.getTripsForRoute = function (route_id) {
     var trip, trip_ids = [], trips = [], i;
     for (trip in this.dataset.trips) {      
         if (this.dataset.trips[trip].route_id === route_id) {
-            trip_ids.push(this.dataset.trips[trip].trip_id);
+            trip_ids.push(this.dataset.trips[trip].id);
         }
     }
     
@@ -215,7 +215,7 @@ GeneralTransitFeed.prototype.getCalendarById = function (id) {
 GeneralTransitFeed.prototype.getStopById = function (id) {
     var stop;
     for (stop in this.dataset.stops) {
-        if (this.dataset.stops[stop].stop_id === id) {
+        if (this.dataset.stops[stop].id === id) {
             return this.dataset.stops[stop];
         } 
     }
@@ -248,7 +248,7 @@ GeneralTransitFeed.prototype.getNearestStop = function (lat, lon) {
     stops = this.getStops();
     
     for (i = 0; i < stops.length; i += 1) {
-        stop_pt = gis.createPoint(stops[i].stop_lat, stops[i].stop_lon);
+        stop_pt = gis.createPoint(stops[i].lat, stops[i].lon);
         d = gis.distanceBetweenTwoPoints(pt, stop_pt);
         if (d < distance) {
             distance = d;
@@ -324,8 +324,9 @@ GeneralTransitFeed.prototype.parseFeedFiles = function () {
 
 GeneralTransitFeed.prototype.load = function (feed, cb, self) {
     var out = [], stats,
-    feedFile = this.dataDir + feed + ".txt";
-    var f = ((feed.indexOf('s') === feed.length - 1) ? feed.substring(0, feed.length - 1) : feed) + "_";
+    feedFile = this.dataDir + feed + ".txt",
+    feedString = ((feed.charAt(feed.length - 1) === "s") ? feed.slice(0, -1) : feed) + "_";
+
     try {
         // Call stat to see if the file exists.  If it doesn't, it will throw
         // an exception and we will set the collection associated with this feed to empty
@@ -336,13 +337,12 @@ GeneralTransitFeed.prototype.load = function (feed, cb, self) {
             columns: true,
             trim: true
         })
-        .transform (function(data, index) {
-            return data;
+        .transform(function (data, index) {
             var ret = {}, column, c, pos;
             for (c in data) {
-                pos = c.indexOf(f);
+                pos = c.indexOf(feedString);
                 
-                column = (pos === -1) ? c : c.substring(pos + f.length);
+                column = (pos === 0) ? c.substring(pos + feedString.length) : c;
                 ret[column] = data[c];
             }
             return ret;

@@ -24,6 +24,8 @@ var AutobusClient = function () {
     
     this.routes = {};
     
+    this.stops = {};
+    
     this.routePaths = {};
     
     this.markers = {};
@@ -35,6 +37,12 @@ var AutobusClient = function () {
     this.initialized = false;
     
     this.acequiaClient = null;
+    
+    this.allDataDownloaded = false;
+};
+
+AutobusClient.prototype.onStops = function (message) {
+    this.stops = message.body[0];
 };
 
 AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
@@ -57,6 +65,7 @@ AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
     this.acequiaClient.on("version", objCallback(this, "onVersion"));
     this.acequiaClient.on("routes", objCallback(this, "onRoutesMessage"));
     this.acequiaClient.on("route", objCallback(this, "onRouteMessage"));
+    this.acequiaClient.on("stops", objCallback(this, "onStops"));
     this.acequiaClient.on("busPosition", objCallback(this, "onBusPosition"));
     this.acequiaClient.addConnectionChangeHandler(objCallback(this, "onConnected"));
     this.acequiaClient.connect();
@@ -76,12 +85,17 @@ AutobusClient.prototype.getCurrentPosition = function () {
 AutobusClient.prototype.onConnected = function (connected) {
     if (connected) {
         this.acequiaClient.send("getVersion");
+        this.acequiaClient.send("getStops");
     }
 };
 
 AutobusClient.prototype.onVersion = function (message) {
     var version = message.body[0].version, ls, routes,
         agency  = message.body[0].agency;
+        
+    if (this.allDataDownloaded) {
+        return;
+    }
 
     if (localStorage.getItem(agency.agency_id + "version") === version) {
         this.agency = JSON.parse(localStorage.getItem(agency.agency_id + "agency"));
@@ -109,13 +123,13 @@ AutobusClient.prototype.onBusPosition = function (message) {
     
     if (!this.buses[busInfo.route_id]) {
         rt = this.routes[busInfo.route_id];
-        label = rt.route_id + ": " + rt.route_desc;
+        label = rt.id + ": " + rt.desc;
         this.buses[busInfo.route_id] = new google.maps.Marker({
             position: point,
             map: this.map,
             title: label,
             icon: MapIconMaker.createLabeledMarkerIcon({width: 20, height: 34, label: label, 
-                                                        primaryColor: rt.route_color, labelColor: rt.route_color})
+                                                        primaryColor: rt.color, labelColor: rt.color})
         });
     } else {
         this.buses[busInfo.route_id].setPosition(point);
@@ -153,9 +167,10 @@ AutobusClient.prototype.onRoute = function (route) {
 
 AutobusClient.prototype.onRouteMessage = function (message) {
     var trip, route = message.body[0];
-    this.routes[route.route_id] = route;
+    console.log(route.id + ": " + JSON.stringify(message).length);
+    this.routes[route.id] = route;
     
-    trip = this.getTripForRoute(route.route_id);
+    trip = this.getTripForRoute(route.id);
     if (trip !== null) {
         this.onRoute(trip);
     }
@@ -219,7 +234,7 @@ AutobusClient.prototype.getAllStopsForRoute = function (route_id) {
     
     addToList = function (list, stop) {
         for (var i = 0; i < list.length; i += 1) {
-            if (list[i].stop_id === stop.stop_id) {
+            if (list[i].id === stop.id) {
                 return;
             }
         }
@@ -277,7 +292,8 @@ AutobusClient.prototype.getTripsForRoute = function (route_id) {
 };
 
 AutobusClient.prototype.getNextArrivalsForStop = function (route_id, stop_id, time) {
-    var i, j, k, trips = [], stop_time, times = [], headsigns = [], arrival_time, service_id, direction_id, direction_ids = ["0", "1"];
+    var i, j, k, trips = [], stop_time, times = [], headsigns = [], 
+    arrival_time, service_id, direction_id, direction_ids = ["0", "1"];
 
     if (typeof(time) === "undefined") {
         time = new Date();

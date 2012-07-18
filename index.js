@@ -11,11 +11,15 @@ var sfab_clients = {};
 var acequiaServer = null;
 
 var feedURI = "http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed";
+var latitude = 35.6660;
+var longitude = -105.9632;
 
 var onGetVersion = function (message) {
     var response = {
         version: gtfs.getVersion(),
-        agency: gtfs.getAgency()
+        agency: gtfs.getAgency(),
+        latitude: latitude,
+        longitude: longitude
     };
 
     acequiaServer.send("", "version", response, message.from);    
@@ -27,6 +31,10 @@ var onGetRoutes = function (message) {
 
 var onGetRoute = function (message) {
     acequiaServer.send("", "route", gtfs.getRouteById(message.body[0].route_id), message.from);
+};
+
+var onGetStops = function (message) {
+    acequiaServer.send("", "stops", gtfs.getStops(), message.from);
 };
 
 var onRefresh = function (message) {
@@ -59,11 +67,39 @@ var startHTTPServer = function () {
     acequiaServer.on("refresh", onRefresh);    
     acequiaServer.on("getRoutes", onGetRoutes);
     acequiaServer.on("getRoute", onGetRoute);
+    acequiaServer.on("getStops", onGetStops);    
     acequiaServer.on("getVersion", onGetVersion);    
     acequiaServer.start();
 };
 
 var START = function () {
+    var args = process.argv.splice(2),
+        index = 0;
+
+    while (index < args.length) {
+        switch (args[index]) {
+        case "--feed":
+            index += 1;
+            feedURI = args[index];
+            break;
+            
+        case "--lat":
+            index += 1;
+            latitude = parseFloat(args[index]);
+            break;
+            
+        case "--lon":
+            index += 1;
+            longitude = parseFloat(args[index]);
+            break;
+
+        default:
+            console.error("Unknown command line argument");
+            break;
+        }
+        index += 1;
+    }
+        
     gtfs = GTFS.createGeneralTransitFeed(feedURI, startHTTPServer);    
 };
 
