@@ -31,9 +31,15 @@ app.onRoutes = function (routes) {
 };
 
 app.getNextRoute = function () {
+    var rt;
     this.nextIndex += 1;
     if (this.nextIndex < this.route_ids.length) {
-        this.acequiaClient.send("getRoute", {route_id: this.route_ids[this.nextIndex]});
+        rt = this.retrieve("route" + this.route_ids[this.nextIndex]);
+        if (rt === null) {
+            this.acequiaClient.send("getRoute", {route_id: this.route_ids[this.nextIndex]});
+        } else {
+            this.processRoute(rt);
+        }
     }   
 };
 

@@ -34,7 +34,7 @@ var onGetRoute = function (message) {
 };
 
 var onGetStops = function (message) {
-    acequiaServer.send("", "stops", gtfs.getStops(), message.from);
+    acequiaServer.send("", "stops", gtfs.getStopsDict(), message.from);
 };
 
 var onRefresh = function (message) {

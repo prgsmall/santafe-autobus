@@ -10,10 +10,13 @@ var FeedParser = require('feedparser');
 var gis = require("./gis");
 var utils = require("./utils");
 
-// Location of zip file:  http://gtfs.s3.amazonaws.com/santa-fe-trails_20120413_0532.zip
-//
-// RSS Lcoation:  http://www.gtfs-data-exchange.com/agency/santa-fe-trails/feed
-// DAPP
+var arrayToDict = function (arr) {
+    var i, ret = {};
+    for (i = 0; i < arr.length; i += 1) {
+        ret[arr[i].id] = arr[i];
+    }
+    return ret;
+};
 
 var GTFSReader = function (uri, gtfsobj) {
     this.gtfsobj = gtfsobj;
@@ -132,6 +135,13 @@ GeneralTransitFeed.prototype.getStops = function () {
     return this.dataset.stops;
 };
 
+GeneralTransitFeed.prototype.getStopsDict = function () {
+    if (typeof(this.stopsDict) === "undefined") {
+        this.stopsDict = arrayToDict(this.dataset.stops);
+    }
+    return this.stopsDict;
+};
+
 GeneralTransitFeed.prototype.getStopTimes = function () {
     return this.dataset.stop_times;
 };
@@ -235,7 +245,6 @@ GeneralTransitFeed.prototype.getStopTimeById = function (trip_id, stop_id) {
     if (stop_time) {
         ret = {};
         utils.clone(stop_time, ret);
-        ret.stop = this.getStopById(stop_id);
     }
     return ret;
 };

@@ -5,7 +5,8 @@
  *  Copyright (c) 2012 PRGSoftware, LLC. All rights reserved.
  */
 
-/*global $ document google navigator AcequiaClient MapIconMaker setTimeout localStorage console*/
+/*global $ document google navigator AcequiaClient MapIconMaker setTimeout localStorage
+CJSON console*/
 
 var objCallback = function (obj, func) {
     return function () {
@@ -41,8 +42,22 @@ var AutobusClient = function () {
     this.allDataDownloaded = false;
 };
 
+AutobusClient.prototype.retrieve = function (key) {
+    var  ret = localStorage.getItem(this.agency.id + key);
+    if (ret !== null) {
+        ret = CJSON.parse(ret);
+    }
+    return ret;
+};
+
+AutobusClient.prototype.persist = function (key, obj) {
+    localStorage.setItem(this.agency.id + key, CJSON.stringify(obj));
+};
+
 AutobusClient.prototype.onStops = function (message) {
     this.stops = message.body[0];
+    this.persist("stops", this.stops);
+    this.acequiaClient.send("getRoutes");    
 };
 
 AutobusClient.prototype.init = function (zoom, lat, lng, mapType, mapOptions) {
@@ -85,7 +100,6 @@ AutobusClient.prototype.getCurrentPosition = function () {
 AutobusClient.prototype.onConnected = function (connected) {
     if (connected) {
         this.acequiaClient.send("getVersion");
-        this.acequiaClient.send("getStops");
     }
 };
 
@@ -97,24 +111,28 @@ AutobusClient.prototype.onVersion = function (message) {
         return;
     }
 
-    if (localStorage.getItem(agency.agency_id + "version") === version) {
-        this.agency = JSON.parse(localStorage.getItem(agency.agency_id + "agency"));
-        routes = JSON.parse(localStorage.getItem(agency.agency_id + "routes"));
+    this.agency = agency;
+
+    if (this.retrieve("version") === version) {
+        this.agency = this.retrieve("agency");
+        routes = this.retrieve("routes");
+        this.stops = this.retrieve("stops");
         this.onRoutes(routes);
     } else {
         localStorage.clear();
-        this.agency = agency;
-        localStorage.setItem(agency.agency_id + "version", version);
-        localStorage.setItem(agency.agency_id + "agency", JSON.stringify(agency));
-        this.acequiaClient.send("getRoutes");    
+        this.persist("version", version);
+        this.persist("agency", agency);
+        this.acequiaClient.send("getStops");
     }
     
     this.setAgencyInfo();
 };
 
+
+
 AutobusClient.prototype.setAgencyInfo = function () {
-    document.title = this.agency.agency_name;
-    $("#home-title").html(this.agency.agency_name);
+    document.title = this.agency.name;
+    $("#home-title").html(this.agency.name);
 };
 
 AutobusClient.prototype.onBusPosition = function (message) {
@@ -153,7 +171,7 @@ AutobusClient.prototype.onPositionUpdate = function (position) {
 };
 
 AutobusClient.prototype.onRoutesMessage = function (message) {
-    localStorage.setItem(this.agency.agency_id + "routes", JSON.stringify(message.body));
+    this.persist("routes", message.body);
     this.onRoutes(message.body);
 };
 
@@ -166,14 +184,18 @@ AutobusClient.prototype.onRoute = function (route) {
 };
 
 AutobusClient.prototype.onRouteMessage = function (message) {
-    var trip, route = message.body[0];
-    console.log(route.id + ": " + JSON.stringify(message).length);
+    this.processRoute(message.body[0]);
+};
+
+AutobusClient.prototype.processRoute = function (route) {
+    var trip;
     this.routes[route.id] = route;
+    this.persist("route" + route.id, route);
     
     trip = this.getTripForRoute(route.id);
     if (trip !== null) {
         this.onRoute(trip);
-    }
+    }    
 };
 
 AutobusClient.prototype.routeIdFromEleId = function (eleId) {
@@ -213,24 +235,12 @@ AutobusClient.prototype.dateFromTimeString = function (timeString) {
 };
 
 AutobusClient.prototype.stopForStopId = function (route_id, stop_id) {
-    var i, j, trips;
-    
-    trips = this.routes[route_id].trips;
-    
-    for (i = 0; i < trips.length; i += 1) {
-        for (j = 0; j < trips[i].stop_times.length; j += 1) {
-            if (trips[i].stop_times[j].stop_id === stop_id) {
-                return trips[i].stop_times[j].stop;
-            }
-        }
-    }
-
-    return null;
+    return this.stops[stop_id];
 };
 
 AutobusClient.prototype.getAllStopsForRoute = function (route_id) {
     // Retrieve all of the stops for a route
-    var inbound = [], outbound = [], service_id, trips, i, j, addToList;
+    var inbound = [], outbound = [], service_id, trips, i, j, addToList, stop_id;
     
     addToList = function (list, stop) {
         for (var i = 0; i < list.length; i += 1) {
@@ -249,10 +259,11 @@ AutobusClient.prototype.getAllStopsForRoute = function (route_id) {
             continue;
         }
         for (j = 0; j < trips[i].stop_times.length; j += 1) {
+            stop_id = trips[i].stop_times[j].stop_id;
             if (trips[i].direction_id === "0") {
-                addToList(outbound, trips[i].stop_times[j].stop);
+                addToList(outbound, this.stops[stop_id]);
             } else {
-                addToList(inbound, trips[i].stop_times[j].stop);
+                addToList(inbound, this.stops[stop_id]);
             }
         }
     }
